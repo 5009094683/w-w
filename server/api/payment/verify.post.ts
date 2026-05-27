@@ -1,10 +1,33 @@
 import crypto from 'crypto'
-import Razorpay from 'razorpay'
+import { createRazorpayClient } from '../../utils/razorpay'
 
 export default defineEventHandler(async (event) => {
   try {
     const body = await readBody(event)
     const { gateway = 'razorpay' } = body
+
+    // Handle Zoho Payments verification
+    if (gateway === 'zoho') {
+      const { paymentId, paymentSessionId, signature } = body
+
+      if (!paymentId || !paymentSessionId) {
+        throw createError({
+          statusCode: 400,
+          statusMessage: 'Missing required Zoho verification parameters'
+        })
+      }
+
+      const zohoResponse = await $fetch('/api/payment/zoho-verify', {
+        method: 'POST',
+        body: {
+          paymentId,
+          paymentSessionId,
+          signature
+        }
+      }) as any
+
+      return zohoResponse
+    }
 
     // Handle PhonePe verification
     if (gateway === 'phonepe') {
@@ -39,15 +62,11 @@ export default defineEventHandler(async (event) => {
     }
 
     const config = useRuntimeConfig()
-    
-    const razorpay = new Razorpay({
-      key_id: config.razorpayKeyId!,
-      key_secret: config.razorpayKeySecret!,
-    })
+    const { client: razorpay, keySecret } = createRazorpayClient(config)
 
     // Verify signature
     const expectedSignature = crypto
-      .createHmac('sha256', config.razorpayKeySecret!)
+      .createHmac('sha256', keySecret)
       .update(razorpay_order_id + '|' + razorpay_payment_id)
       .digest('hex')
 
@@ -74,11 +93,11 @@ export default defineEventHandler(async (event) => {
       method: payment.method,
       created_at: payment.created_at
     }
-  } catch (error) {
+  } catch (error: any) {
     console.error('Payment verification error:', error)
     throw createError({
-      statusCode: 500,
-      statusMessage: 'Payment verification failed'
+      statusCode: error.statusCode || 500,
+      statusMessage: error.statusMessage || 'Payment verification failed'
     })
   }
 }) 

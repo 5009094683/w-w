@@ -24,7 +24,7 @@ const form = reactive({
   message: "",
 });
 
-const turnstileToken = ref("");
+const { ensureTurnstileToken } = useTurnstileChallenge();
 const status = ref<"idle" | "sending" | "success" | "error">("idle");
 const errorMsg = ref("");
 const copiedField = ref("");
@@ -36,15 +36,21 @@ async function handleSubmit() {
   errorMsg.value = "";
 
   try {
+    const token = await ensureTurnstileToken();
+
     await $fetch("/api/contact", {
       method: "POST",
-      body: { ...form, token: turnstileToken.value },
+      body: { ...form, token },
     });
     status.value = "success";
     Object.assign(form, { name: "", email: "", company: "", phone: "", message: "" });
   } catch (err: any) {
+    if (err?.message === 'Verification cancelled') {
+      status.value = 'idle'
+      return
+    }
     status.value = "error";
-    errorMsg.value = err?.data?.statusMessage || "Something went wrong. Please try again.";
+    errorMsg.value = err?.data?.statusMessage || err?.message || "Something went wrong. Please try again.";
   }
 }
 
@@ -135,8 +141,6 @@ async function copyToClipboard(text: string, field: string) {
                   class="w-full resize-none rounded-lg border border-gray-800 bg-gray-900/50 px-4 py-3 text-sm text-white placeholder-gray-600 outline-none transition-colors focus:border-teal-500/50 focus:ring-1 focus:ring-teal-500/20"
                 />
               </div>
-
-              <NuxtTurnstile v-model="turnstileToken" />
 
               <p v-if="status === 'error'" class="text-sm text-red-400">{{ errorMsg }}</p>
 

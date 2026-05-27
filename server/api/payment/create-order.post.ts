@@ -1,9 +1,23 @@
-import Razorpay from 'razorpay'
+import { createRazorpayClient } from '../../utils/razorpay'
+import { verifyTurnstileFromRequest } from '../../utils/turnstile'
+import { assertZohoAccountConfigured, getZohoAccessToken, getZohoPaymentsApiUrl } from '../../utils/zoho-payments'
+
+interface ZohoCreateSessionResponse {
+  code: number
+  message: string
+  payments_session: {
+    payments_session_id: string
+    currency: string
+    amount: string
+    reference_number?: string
+    expiry_time?: number
+  }
+}
 
 export default defineEventHandler(async (event) => {
   try {
     const body = await readBody(event)
-    const { amount, currency = 'INR', gateway = 'razorpay' } = body
+    const { amount, currency = 'INR', gateway = 'razorpay', turnstileToken } = body
 
     if (!amount) {
       throw createError({
@@ -12,7 +26,53 @@ export default defineEventHandler(async (event) => {
       })
     }
 
+    await verifyTurnstileFromRequest(event, turnstileToken)
+
     const config = useRuntimeConfig()
+
+    // If Zoho Payments is selected and currency is INR
+    if (gateway === 'zoho' && currency === 'INR') {
+      if (!config.zohoAccountId || !config.zohoApiKey) {
+        throw createError({
+          statusCode: 500,
+          statusMessage: 'Zoho Payments not configured'
+        })
+      }
+
+      assertZohoAccountConfigured(config)
+      const accessToken = await getZohoAccessToken(config)
+      const referenceNumber = `YBX-${Date.now()}`
+      const sessionUrl = getZohoPaymentsApiUrl(config, 'paymentsessions')
+
+      const response = await $fetch<ZohoCreateSessionResponse>(sessionUrl, {
+        method: 'POST',
+        headers: {
+          Authorization: `Zoho-oauthtoken ${accessToken}`,
+          'Content-Type': 'application/json'
+        },
+        body: {
+          amount,
+          currency: 'INR',
+          description: `Payment of INR ${amount} for YBX Labs`,
+          reference_number: referenceNumber
+        }
+      })
+
+      const session = response.payments_session
+
+      return {
+        success: true,
+        gateway: 'zoho',
+        payment_session_id: session.payments_session_id,
+        order_id: session.payments_session_id,
+        amount: Number(session.amount),
+        currency: session.currency,
+        reference_number: session.reference_number || referenceNumber,
+        account_id: config.zohoAccountId,
+        api_key: config.zohoApiKey,
+        is_test_mode: !!config.zohoIsSandbox
+      }
+    }
 
     // If PhonePe is selected and currency is INR
     if (gateway === 'phonepe' && currency === 'INR') {
@@ -47,30 +107,7 @@ export default defineEventHandler(async (event) => {
     }
 
     // For Razorpay (default) or non-INR currencies
-    // Debug logging for environment variables
-    console.log('Environment Debug:', {
-      hasKeyId: !!config.razorpayKeyId,
-      hasKeySecret: !!config.razorpayKeySecret,
-      keyIdLength: config.razorpayKeyId?.length || 0,
-      keySecretLength: config.razorpayKeySecret?.length || 0,
-      nodeEnv: process.env.NODE_ENV
-    })
-
-    if (!config.razorpayKeyId || !config.razorpayKeySecret) {
-      console.error('Missing Razorpay credentials:', {
-        keyId: !!config.razorpayKeyId,
-        keySecret: !!config.razorpayKeySecret
-      })
-      throw createError({
-        statusCode: 500,
-        statusMessage: 'Payment gateway not configured'
-      })
-    }
-    
-    const razorpay = new Razorpay({
-      key_id: config.razorpayKeyId,
-      key_secret: config.razorpayKeySecret,
-    })
+    const { client: razorpay, keyId } = createRazorpayClient(config)
 
     const options = {
       amount: amount * 100, // Razorpay expects amount in paise
@@ -87,13 +124,25 @@ export default defineEventHandler(async (event) => {
       order_id: order.id,
       amount: order.amount,
       currency: order.currency,
-      key_id: config.razorpayKeyId
+      key_id: keyId,
+      is_test_mode: !!config.razorpayIsSandbox
     }
-  } catch (error) {
+  } catch (error: any) {
     console.error('Payment order creation error:', error)
+
+    if (error.data) {
+      console.error('Payment order creation error response:', error.data)
+    }
+
+    const razorpayMessage = error?.error?.description
+    const statusMessage = razorpayMessage
+      || error.statusMessage
+      || error.message
+      || 'Failed to create payment order'
+
     throw createError({
-      statusCode: 500,
-      statusMessage: 'Failed to create payment order'
+      statusCode: error.statusCode || 500,
+      statusMessage
     })
   }
 }) 

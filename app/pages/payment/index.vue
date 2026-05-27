@@ -355,9 +355,9 @@ const formattedAmount = computed(() => {
 
 // Form validation
 const isFormValid = computed(() => {
-  return amount.value && 
-         parseFloat(amount.value) > 0 && 
-         parseFloat(amount.value) <= 100000 && 
+  return amount.value &&
+         parseFloat(amount.value) > 0 &&
+         parseFloat(amount.value) <= 100000 &&
          selectedCurrency.value &&
          !amountError.value
 })

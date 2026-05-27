@@ -22,7 +22,7 @@
             
             <div class="payment-details">
               <p class="payment-description">You are about to pay {{ formattedAmount }}</p>
-              <p class="secure-text">🔒 Secure payment powered by {{ gateway === 'phonepe' ? 'PhonePe' : 'Razorpay' }}</p>
+              <p class="secure-text">🔒 Secure payment powered by {{ gatewayName }}</p>
             </div>
 
             <button 
@@ -32,9 +32,10 @@
             >
               <span v-if="loading">
                 <template v-if="gateway === 'phonepe'">Loading PhonePe Payment...</template>
+                <template v-else-if="gateway === 'zoho'">Loading Zoho Payments...</template>
                 <template v-else>Processing...</template>
               </span>
-              <span v-else>Pay {{ formattedAmount }} via {{ gateway === 'phonepe' ? 'PhonePe' : 'Razorpay' }}</span>
+              <span v-else>Pay {{ formattedAmount }} via {{ gatewayName }}</span>
             </button>
 
             <div v-if="error" class="error-message">
@@ -99,6 +100,7 @@ interface PaymentDetails {
 
 const route = useRoute()
 const router = useRouter()
+const { ensureTurnstileToken } = useTurnstileChallenge()
 
 // Extract amount and gateway from URL
 const amountParam = Array.isArray(route.params.amount) 
@@ -113,6 +115,18 @@ const loading = ref(false)
 const error = ref('')
 const showThankYou = ref(false)
 const paymentDetails = ref<PaymentDetails>({})
+
+const buildCreateOrderBody = (gatewayName: string, turnstileToken: string) => ({
+  amount: amount.value,
+  currency: currency.value,
+  gateway: gatewayName,
+  turnstileToken
+})
+
+const handlePaymentStartError = (err: any) => {
+  error.value = err?.data?.statusMessage || err.message || 'Payment initiation failed'
+  loading.value = false
+}
 
 // Parse amount from URL parameter (e.g., "10INR" -> 10)
 const parseAmount = (param: string) => {
@@ -171,6 +185,17 @@ const formattedAmount = computed(() => {
   return symbol ? `${symbol}${amount.value}` : `${amount.value} ${currency.value}`
 })
 
+const gatewayName = computed(() => {
+  switch (gateway.value) {
+    case 'phonepe':
+      return 'PhonePe'
+    case 'zoho':
+      return 'Zoho Payments'
+    default:
+      return 'Razorpay'
+  }
+})
+
 // Initialize payment data
 onMounted(() => {
   parseAmount(amountParam)
@@ -208,11 +233,95 @@ const loadPhonePeScript = () => {
   })
 }
 
+// Load Zoho Payments script
+const loadZohoScript = () => {
+  return new Promise((resolve) => {
+    if ((window as any).ZPayments) {
+      resolve(true)
+      return
+    }
+
+    const script = document.createElement('script')
+    script.src = 'https://static.zohocdn.com/zpay/zpay-js/v1/zpayments.js'
+    script.onload = () => resolve(true)
+    script.onerror = () => resolve(false)
+    document.body.appendChild(script)
+  })
+}
+
 // Initiate payment process
 const initiatePayment = async () => {
   try {
     loading.value = true
     error.value = ''
+
+    let turnstileToken = ''
+    try {
+      turnstileToken = await ensureTurnstileToken()
+    } catch (err: any) {
+      loading.value = false
+      if (err?.message !== 'Verification cancelled') {
+        error.value = err?.message || 'Verification failed'
+      }
+      return
+    }
+
+    // Handle Zoho Payments flow
+    if (gateway.value === 'zoho' && currency.value === 'INR') {
+      const scriptLoaded = await loadZohoScript()
+      if (!scriptLoaded) {
+        throw new Error('Failed to load Zoho Payments widget')
+      }
+
+      const orderData = await $fetch('/api/payment/create-order', {
+        method: 'POST',
+        body: buildCreateOrderBody('zoho', turnstileToken)
+      }) as any
+
+      if (!orderData.success) {
+        throw new Error('Failed to create Zoho payment session')
+      }
+
+      const widgetConfig: Record<string, unknown> = {
+        account_id: orderData.account_id,
+        domain: 'IN',
+        otherOptions: {
+          api_key: orderData.api_key
+        }
+      }
+
+      if (orderData.is_test_mode) {
+        ;(widgetConfig.otherOptions as Record<string, unknown>).is_test_mode = true
+      }
+
+      const zohoInstance = new (window as any).ZPayments(widgetConfig)
+
+      try {
+        const widgetResponse = await zohoInstance.requestPaymentMethod({
+          amount: String(orderData.amount),
+          currency_code: orderData.currency,
+          payments_session_id: orderData.payment_session_id,
+          currency_symbol: '₹',
+          business: 'YBX Labs',
+          description: `Payment of ${formattedAmount.value}`,
+          reference_number: orderData.reference_number,
+          invoice_number: orderData.reference_number
+        })
+
+        await verifyZohoPayment(widgetResponse, orderData.payment_session_id)
+      } catch (err: any) {
+        if (err?.code === 'widget_closed') {
+          error.value = 'Payment cancelled'
+          loading.value = false
+        } else {
+          throw err
+        }
+      } finally {
+        await zohoInstance.close()
+      }
+
+      return
+    }
 
     // Handle PhonePe payment flow
     if (gateway.value === 'phonepe' && currency.value === 'INR') {
@@ -225,11 +334,7 @@ const initiatePayment = async () => {
       console.log('Creating PhonePe order...')
       const orderData = await $fetch('/api/payment/create-order', {
         method: 'POST',
-        body: {
-          amount: amount.value,
-          currency: currency.value,
-          gateway: 'phonepe'
-        }
+        body: buildCreateOrderBody('phonepe', turnstileToken)
       }) as any
 
       if (!orderData.success) {
@@ -346,11 +451,7 @@ const initiatePayment = async () => {
     // Create order
     const orderData = await $fetch('/api/payment/create-order', {
       method: 'POST',
-      body: {
-        amount: amount.value,
-        currency: currency.value,
-        gateway: 'razorpay'
-      }
+      body: buildCreateOrderBody('razorpay', turnstileToken)
     }) as any
 
     if (!orderData.success) {
@@ -384,7 +485,38 @@ const initiatePayment = async () => {
 
   } catch (err: any) {
     console.error('Payment initiation error:', err)
-    error.value = err.message || 'Payment initiation failed'
+    handlePaymentStartError(err)
+  }
+}
+
+// Verify Zoho payment
+const verifyZohoPayment = async (response: any, paymentSessionId: string) => {
+  try {
+    if (!response?.payment_id) {
+      throw new Error('Payment ID not received from Zoho')
+    }
+
+    const verificationData = await $fetch('/api/payment/verify', {
+      method: 'POST',
+      body: {
+        gateway: 'zoho',
+        paymentId: response.payment_id,
+        paymentSessionId,
+        signature: response.signature
+      }
+    }) as any
+
+    if (verificationData.success) {
+      paymentDetails.value = verificationData
+      showThankYou.value = true
+    } else {
+      throw new Error('Payment verification failed')
+    }
+  } catch (err: any) {
+    console.error('Zoho payment verification error:', err)
+    error.value = err.message || 'Payment verification failed'
+    throw err
+  } finally {
     loading.value = false
   }
 }
@@ -466,11 +598,10 @@ const goToPayments = () => {
 
 // Dynamic SEO - watch for changes in amount, currency, and gateway
 watch([amount, currency, gateway], () => {
-  const gatewayName = gateway.value === 'phonepe' ? 'PhonePe' : 'Razorpay'
   useHead({
     title: `Pay ${formattedAmount.value} - YBX Labs`,
     meta: [
-      { name: 'description', content: `Secure payment of ${formattedAmount.value} via ${gatewayName}` }
+      { name: 'description', content: `Secure payment of ${formattedAmount.value} via ${gatewayName.value}` }
     ]
   })
 }, { immediate: true })

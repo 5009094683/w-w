@@ -53,6 +53,31 @@
                   </div>
                 </label>
                 
+                <label class="gateway-option" :class="{ 'selected': selectedGateway === 'zoho' }">
+                  <input 
+                    type="radio" 
+                    name="gateway" 
+                    value="zoho" 
+                    v-model="selectedGateway"
+                    class="gateway-radio"
+                  />
+                  <div class="gateway-content">
+                    <div class="gateway-logo">
+                      <Icon name="ph:credit-card" class="gateway-icon zoho-color" />
+                    </div>
+                    <div class="gateway-info">
+                      <div class="gateway-name">Zoho Payments</div>
+                      <div class="gateway-description">Cards, UPI, Net Banking & Wallets for Indian Users</div>
+                      <div class="gateway-features">
+                        <span class="feature-tag">UPI</span>
+                        <span class="feature-tag">Credit/Debit Cards</span>
+                        <span class="feature-tag">Net Banking</span>
+                        <span class="feature-tag">Wallets</span>
+                      </div>
+                    </div>
+                  </div>
+                </label>
+
                 <label class="gateway-option" :class="{ 'selected': selectedGateway === 'phonepe' }">
                   <input 
                     type="radio" 
@@ -87,7 +112,7 @@
                 >
                   <Icon v-if="loading" name="ph:spinner" class="loading-icon" />
                   <span v-if="loading">Processing...</span>
-                  <span v-else>Pay {{ formattedAmount }} via {{ selectedGateway === 'phonepe' ? 'PhonePe' : 'Razorpay' }}</span>
+                  <span v-else>Pay {{ formattedAmount }} via {{ gatewayLabel }}</span>
                 </button>
                 
                 <button 
@@ -150,6 +175,17 @@ onMounted(() => {
 // Format amount for display
 const formattedAmount = computed(() => {
   return `₹${amount.value.toFixed(2)}`
+})
+
+const gatewayLabel = computed(() => {
+  switch (selectedGateway.value) {
+    case 'phonepe':
+      return 'PhonePe'
+    case 'zoho':
+      return 'Zoho Payments'
+    default:
+      return 'Razorpay'
+  }
 })
 
 // Proceed to payment processing
@@ -315,6 +351,10 @@ useHead({
 
 .phonepe-color {
   color: #5f259f;
+}
+
+.zoho-color {
+  color: #E42527;
 }
 
 .gateway-info {

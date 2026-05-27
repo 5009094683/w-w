@@ -32,11 +32,12 @@ export default defineNuxtConfig({
     '@nuxtjs/tailwindcss',
     '@nuxt/fonts',
     '@nuxt/icon',
+    '@nuxt/scripts',
     '@nuxtjs/turnstile',
   ],
 
   turnstile: {
-    siteKey: process.env.NUXT_TURNSTILE_SITE_KEY || '',
+    siteKey: process.env.NUXT_TURNSTILE_SITE_KEY || process.env.TURNSTILE_SITE_KEY || '',
   },
 
   prismic: {
@@ -68,17 +69,37 @@ export default defineNuxtConfig({
     // Private keys (only available on the server-side)
     razorpayKeyId: process.env.RAZORPAY_KEY_ID || process.env.NUXT_RAZORPAY_KEY_ID,
     razorpayKeySecret: process.env.RAZORPAY_KEY_SECRET || process.env.NUXT_RAZORPAY_KEY_SECRET,
+    razorpayTestKeyId: process.env.RAZORPAY_TEST_KEY_ID || process.env.NUXT_RAZORPAY_TEST_KEY_ID,
+    razorpayTestKeySecret: process.env.RAZORPAY_TEST_KEY_SECRET || process.env.NUXT_RAZORPAY_TEST_KEY_SECRET,
+    razorpayIsSandbox: process.env.RAZORPAY_IS_SANDBOX === 'true',
     // PhonePe credentials
     phonepeClientId: process.env.PHONEPE_CLIENT_ID || process.env.NUXT_PHONEPE_CLIENT_ID,
     phonepeApiKey: process.env.PHONEPE_API_KEY || process.env.NUXT_PHONEPE_API_KEY,
+    // Zoho Payments credentials
+    zohoAccountId: process.env.ZOHO_ACCOUNT_ID || process.env.NUXT_ZOHO_ACCOUNT_ID,
+    zohoApiKey: process.env.ZOHO_API_KEY || process.env.NUXT_ZOHO_API_KEY,
+    zohoSigningKey: process.env.ZOHO_SIGN_KEY || process.env.NUXT_ZOHO_SIGN_KEY,
+    zohoClientId: process.env.ZOHO_CLIENT_ID || process.env.NUXT_ZOHO_CLIENT_ID,
+    zohoClientSecret: process.env.ZOHO_CLIENT_SECRET || process.env.NUXT_ZOHO_CLIENT_SECRET,
+    zohoRefreshToken: process.env.ZOHO_REFRESH_TOKEN || process.env.NUXT_ZOHO_REFRESH_TOKEN,
+    zohoIsSandbox: process.env.ZOHO_IS_SANDBOX === 'true',
     // Resend
     resendApiKey: process.env.RESEND_API_KEY,
     contactEmailTo: process.env.CONTACT_EMAIL_TO || 'hello@ybxlabs.com',
     contactEmailFrom: process.env.CONTACT_EMAIL_FROM || 'website@ybxlabs.com',
     // Turnstile secret (server-side only)
-    turnstile: { secretKey: process.env.NUXT_TURNSTILE_SECRET_KEY || '' },
+    turnstile: {
+      secretKey:
+        process.env.NUXT_TURNSTILE_SECRET_KEY
+        || process.env.TURNSTILE_SECRET_KEY
+        || ''
+    },
     // Public keys (exposed to the client-side)
     public: {
+      turnstileSiteKey:
+        process.env.NUXT_TURNSTILE_SITE_KEY
+        || process.env.TURNSTILE_SITE_KEY
+        || '',
       siteUrl: process.env.NUXT_PUBLIC_APP_URL || 
                process.env.NODE_ENV === 'production' 
                  ? 'https://ybxlabs.com'  // Replace with your actual domain
