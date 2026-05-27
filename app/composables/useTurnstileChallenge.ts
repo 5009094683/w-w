@@ -15,13 +15,12 @@ export function useTurnstileEnabled() {
   })
 }
 
-const modalOpen = useState('turnstile-modal-open', () => false)
-const modalToken = useState('turnstile-modal-token', () => '')
-
 let pendingResolve: ((token: string) => void) | null = null
 let pendingReject: ((reason?: unknown) => void) | null = null
 
 export function useTurnstileChallenge() {
+  const modalOpen = useState('turnstile-modal-open', () => false)
+  const modalToken = useState('turnstile-modal-token', () => '')
   const isEnabled = useTurnstileEnabled()
 
   function completeChallenge(token: string) {
