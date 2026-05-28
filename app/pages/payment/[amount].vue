@@ -98,6 +98,12 @@ interface PaymentDetails {
   created_at?: number
 }
 
+import {
+  getRazorpayCheckoutTheme,
+  hidePaymentCheckoutBackdrop,
+  showPaymentCheckoutBackdrop
+} from '~/utils/payment-checkout-backdrop'
+
 const route = useRoute()
 const router = useRouter()
 const { ensureTurnstileToken } = useTurnstileChallenge()
@@ -297,6 +303,7 @@ const initiatePayment = async () => {
       const zohoInstance = new (window as any).ZPayments(widgetConfig)
 
       try {
+        showPaymentCheckoutBackdrop()
         const widgetResponse = await zohoInstance.requestPaymentMethod({
           amount: String(orderData.amount),
           currency_code: orderData.currency,
@@ -317,6 +324,7 @@ const initiatePayment = async () => {
           throw err
         }
       } finally {
+        hidePaymentCheckoutBackdrop()
         await zohoInstance.close()
       }
 
@@ -467,23 +475,31 @@ const initiatePayment = async () => {
       description: `Payment of ${formattedAmount.value}`,
       order_id: orderData.order_id,
       handler: async (response: any) => {
+        hidePaymentCheckoutBackdrop()
         await verifyPayment(response)
       },
       modal: {
         ondismiss: () => {
+          hidePaymentCheckoutBackdrop()
           loading.value = false
-        }
+        },
+        animation: true
       },
-      theme: {
-        color: '#3B82F6'
-      }
+      theme: getRazorpayCheckoutTheme()
     }
 
     // Open Razorpay checkout
     const razorpay = new (window as any).Razorpay(options)
+    razorpay.on('payment.failed', () => {
+      hidePaymentCheckoutBackdrop()
+      loading.value = false
+      error.value = 'Payment failed. Please try again.'
+    })
+    showPaymentCheckoutBackdrop()
     razorpay.open()
 
   } catch (err: any) {
+    hidePaymentCheckoutBackdrop()
     console.error('Payment initiation error:', err)
     handlePaymentStartError(err)
   }
@@ -582,6 +598,7 @@ const verifyPayment = async (response?: any) => {
     console.error('Payment verification error:', err)
     error.value = err.message || 'Payment verification failed'
   } finally {
+    hidePaymentCheckoutBackdrop()
     loading.value = false
   }
 }
