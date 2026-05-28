@@ -1,4 +1,4 @@
-import { getRazorpayDiagnostics } from '../../utils/razorpay'
+import { getRazorpayDiagnostics, probeRazorpayAuth } from '../../utils/razorpay'
 
 /**
  * Safe diagnostics: key prefix + mode only (no secrets).
@@ -16,9 +16,21 @@ export default defineEventHandler((event) => {
   const config = useRuntimeConfig()
   const diagnostics = getRazorpayDiagnostics(config)
 
+  let auth_ok = false
+  let auth_error: string | undefined
+
+  try {
+    await probeRazorpayAuth(config)
+    auth_ok = true
+  } catch (error: any) {
+    auth_error = error?.error?.description || error?.message || 'Authentication failed'
+  }
+
   return {
-    ok: true,
+    ok: auth_ok,
     host: getRequestHeader(event, 'host'),
+    auth_ok,
+    auth_error,
     ...diagnostics
   }
 })

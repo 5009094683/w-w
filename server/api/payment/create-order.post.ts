@@ -149,7 +149,8 @@ export default defineEventHandler(async (event) => {
 
       statusMessage =
         `Razorpay authentication failed on server (${diagnostics.mode} mode, key ${diagnostics.key_id_prefix}). `
-        + 'Update hosting env vars to match your working local .env, then redeploy.'
+        + 'The Key ID and Key Secret on hosting must be from the same Razorpay API key pair. '
+        + 'Compare secret_fingerprint with local, or paste fresh values from Dashboard → API Keys → Live.'
     }
 
     throw createError({

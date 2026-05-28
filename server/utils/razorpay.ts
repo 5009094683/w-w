@@ -1,5 +1,14 @@
+import { createHash } from 'node:crypto'
 import Razorpay from 'razorpay'
 import { maskKeyId, parseEnvBool, readEnv } from './env'
+
+function secretFingerprint(keySecret?: string) {
+  if (!keySecret) {
+    return null
+  }
+
+  return createHash('sha256').update(keySecret).digest('hex').slice(0, 8)
+}
 
 interface RazorpayRuntimeConfig {
   razorpayKeyId?: string
@@ -57,8 +66,21 @@ export function getRazorpayDiagnostics(config: RazorpayRuntimeConfig) {
     mode: useSandbox ? 'sandbox' : 'live',
     key_id_prefix: maskKeyId(keyId),
     has_secret: !!keySecret,
-    secret_length: keySecret?.length ?? 0
+    secret_length: keySecret?.length ?? 0,
+    secret_fingerprint: secretFingerprint(keySecret)
   }
+}
+
+export async function probeRazorpayAuth(config: RazorpayRuntimeConfig) {
+  const { client } = createRazorpayClient(config)
+
+  await client.orders.create({
+    amount: 100,
+    currency: 'INR',
+    receipt: `probe_${Date.now()}`
+  })
+
+  return { auth_ok: true }
 }
 
 export function createRazorpayClient(config: RazorpayRuntimeConfig) {
