@@ -1,4 +1,4 @@
-import { createRazorpayClient } from '../../utils/razorpay'
+import { createRazorpayClient, getRazorpayDiagnostics } from '../../utils/razorpay'
 import { verifyTurnstileFromRequest } from '../../utils/turnstile'
 import { assertZohoAccountConfigured, getZohoAccessToken, getZohoPaymentsApiUrl } from '../../utils/zoho-payments'
 
@@ -107,7 +107,7 @@ export default defineEventHandler(async (event) => {
     }
 
     // For Razorpay (default) or non-INR currencies
-    const { client: razorpay, keyId } = createRazorpayClient(config)
+    const { client: razorpay, keyId, useSandbox } = createRazorpayClient(config)
 
     const options = {
       amount: amount * 100, // Razorpay expects amount in paise
@@ -125,7 +125,7 @@ export default defineEventHandler(async (event) => {
       amount: order.amount,
       currency: order.currency,
       key_id: keyId,
-      is_test_mode: !!config.razorpayIsSandbox
+      is_test_mode: useSandbox
     }
   } catch (error: any) {
     console.error('Payment order creation error:', error)
@@ -135,14 +135,29 @@ export default defineEventHandler(async (event) => {
     }
 
     const razorpayMessage = error?.error?.description
-    const statusMessage = razorpayMessage
+    let statusMessage = razorpayMessage
       || error.statusMessage
       || error.message
       || 'Failed to create payment order'
 
+    const isRazorpayAuthError =
+      error.statusCode === 401 || razorpayMessage === 'Authentication failed'
+
+    if (isRazorpayAuthError) {
+      const diagnostics = getRazorpayDiagnostics(useRuntimeConfig())
+      console.error('Razorpay auth failed. Server config:', diagnostics)
+
+      statusMessage =
+        `Razorpay authentication failed on server (${diagnostics.mode} mode, key ${diagnostics.key_id_prefix}). `
+        + 'Update hosting env vars to match your working local .env, then redeploy.'
+    }
+
     throw createError({
       statusCode: error.statusCode || 500,
-      statusMessage
+      statusMessage,
+      data: isRazorpayAuthError
+        ? { razorpay: getRazorpayDiagnostics(useRuntimeConfig()) }
+        : undefined
     })
   }
 }) 

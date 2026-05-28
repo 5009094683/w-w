@@ -67,11 +67,12 @@ export default defineNuxtConfig({
   // Add runtime config for head management
   runtimeConfig: {
     // Private keys (only available on the server-side)
-    razorpayKeyId: process.env.RAZORPAY_KEY_ID || process.env.NUXT_RAZORPAY_KEY_ID,
-    razorpayKeySecret: process.env.RAZORPAY_KEY_SECRET || process.env.NUXT_RAZORPAY_KEY_SECRET,
-    razorpayTestKeyId: process.env.RAZORPAY_TEST_KEY_ID || process.env.NUXT_RAZORPAY_TEST_KEY_ID,
-    razorpayTestKeySecret: process.env.RAZORPAY_TEST_KEY_SECRET || process.env.NUXT_RAZORPAY_TEST_KEY_SECRET,
-    razorpayIsSandbox: process.env.RAZORPAY_IS_SANDBOX === 'true',
+    // Empty defaults: server reads RAZORPAY_* / NUXT_RAZORPAY_* from process.env at runtime (Cloudflare/NuxtHub)
+    razorpayKeyId: '',
+    razorpayKeySecret: '',
+    razorpayTestKeyId: '',
+    razorpayTestKeySecret: '',
+    razorpayIsSandbox: false,
     // PhonePe credentials
     phonepeClientId: process.env.PHONEPE_CLIENT_ID || process.env.NUXT_PHONEPE_CLIENT_ID,
     phonepeApiKey: process.env.PHONEPE_API_KEY || process.env.NUXT_PHONEPE_API_KEY,
