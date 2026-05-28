@@ -4,7 +4,7 @@ import { getRazorpayDiagnostics, probeRazorpayAuth } from '../../utils/razorpay'
  * Safe diagnostics: key prefix + mode only (no secrets).
  * Set RAZORPAY_CONFIG_DEBUG=true in hosting env to enable on production.
  */
-export default defineEventHandler((event) => {
+export default defineEventHandler(async (event) => {
   const debugEnabled =
     process.env.RAZORPAY_CONFIG_DEBUG === 'true'
     || process.env.NUXT_RAZORPAY_CONFIG_DEBUG === 'true'
