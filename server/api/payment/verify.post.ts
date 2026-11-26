@@ -1,4 +1,5 @@
 import crypto from 'crypto'
+import { getPhonePeAccessToken, isValidPhonePeMerchantOrderId } from '../../utils/phonepe'
 import { createRazorpayClient } from '../../utils/razorpay'
 
 export default defineEventHandler(async (event) => {
@@ -31,14 +32,24 @@ export default defineEventHandler(async (event) => {
 
     // Handle PhonePe verification
     if (gateway === 'phonepe') {
-      const { merchantOrderId, accessToken } = body
+      const { merchantOrderId } = body
 
-      if (!merchantOrderId || !accessToken) {
+      if (!merchantOrderId) {
         throw createError({
           statusCode: 400,
           statusMessage: 'Missing required PhonePe verification parameters'
         })
       }
+
+      if (!isValidPhonePeMerchantOrderId(merchantOrderId)) {
+        throw createError({
+          statusCode: 400,
+          statusMessage: 'Invalid PhonePe order ID'
+        })
+      }
+
+      // The browser never holds a PhonePe token, so request one here.
+      const accessToken = await getPhonePeAccessToken(useRuntimeConfig())
 
       const phonepeResponse = await $fetch('/api/payment/phonepe-verify', {
         method: 'POST',

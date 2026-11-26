@@ -351,8 +351,7 @@ const initiatePayment = async () => {
 
       console.log('PhonePe order created:', orderData)
 
-      // Store access token for verification
-      sessionStorage.setItem('phonepe_access_token', orderData.access_token)
+      // Keep the order ID so the payment can be verified afterwards
       sessionStorage.setItem('phonepe_merchant_order_id', orderData.merchant_order_id)
 
       // Skip iFrame attempt if force redirect mode is enabled
@@ -540,10 +539,9 @@ const verifyZohoPayment = async (response: any, paymentSessionId: string) => {
 // Verify PhonePe payment specifically
 const verifyPhonePePayment = async () => {
   try {
-    const accessToken = sessionStorage.getItem('phonepe_access_token')
     const merchantOrderId = sessionStorage.getItem('phonepe_merchant_order_id')
 
-    if (!accessToken || !merchantOrderId) {
+    if (!merchantOrderId) {
       throw new Error('PhonePe payment session expired')
     }
 
@@ -551,13 +549,11 @@ const verifyPhonePePayment = async () => {
       method: 'POST',
       body: {
         gateway: 'phonepe',
-        merchantOrderId,
-        accessToken
+        merchantOrderId
       }
     }) as any
 
     // Clear stored data
-    sessionStorage.removeItem('phonepe_access_token')
     sessionStorage.removeItem('phonepe_merchant_order_id')
 
     if (verificationData.success) {

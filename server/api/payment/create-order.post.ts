@@ -1,3 +1,4 @@
+import { getPhonePeAccessToken } from '../../utils/phonepe'
 import { createRazorpayClient, getRazorpayDiagnostics } from '../../utils/razorpay'
 import { verifyTurnstileFromRequest } from '../../utils/turnstile'
 import { assertZohoAccountConfigured, getZohoAccessToken, getZohoPaymentsApiUrl } from '../../utils/zoho-payments'
@@ -76,21 +77,15 @@ export default defineEventHandler(async (event) => {
 
     // If PhonePe is selected and currency is INR
     if (gateway === 'phonepe' && currency === 'INR') {
-      // First get PhonePe access token
-      const authResponse = await $fetch('/api/payment/phonepe-auth', {
-        method: 'POST'
-      }) as any
-
-      if (!authResponse.success) {
-        throw new Error('Failed to authenticate with PhonePe')
-      }
+      // The access token stays on the server; the browser only needs the order.
+      const accessToken = await getPhonePeAccessToken(config)
 
       // Create PhonePe payment order
       const phonepeResponse = await $fetch('/api/payment/phonepe-create-order', {
         method: 'POST',
         body: {
           amount,
-          accessToken: authResponse.accessToken
+          accessToken
         }
       }) as any
 
@@ -101,8 +96,7 @@ export default defineEventHandler(async (event) => {
         merchant_order_id: phonepeResponse.merchant_order_id,
         amount: phonepeResponse.amount,
         currency: phonepeResponse.currency,
-        redirect_url: phonepeResponse.redirect_url,
-        access_token: authResponse.accessToken // Pass token for verification later
+        redirect_url: phonepeResponse.redirect_url
       }
     }
 
