@@ -1,110 +1,91 @@
-import { repositoryName } from './slicemachine.config.json';
+import tailwindcss from '@tailwindcss/vite'
 
-// https://nuxt.com/docs/api/configuration/nuxt-config
+// A production build needs no environment variables. A staging build sets
+// NUXT_SITE_URL to its own address and NUXT_SITE_ENV=staging, which also keeps
+// it out of search engines.
+const siteUrl = process.env.NUXT_SITE_URL || 'https://ybxlabs.com'
+const isStaging = process.env.NUXT_SITE_ENV === 'staging'
+
 export default defineNuxtConfig({
-  future: {
-    compatibilityVersion: 4
-  },
+  compatibilityDate: '2026-11-26',
 
-  devtools: { enabled: true },
+  modules: ['@nuxtjs/seo', '@nuxt/image', '@nuxt/fonts', '@nuxt/eslint'],
 
-  app: {
-    head: {
-      title: 'YBX Labs',
-      htmlAttrs: {
-        lang: 'en',
-      },
-      meta: [
-        { charset: 'utf-8' },
-        { name: 'viewport', content: 'width=device-width, initial-scale=1' },
-        { name: 'description', content: '' },
-        { name: 'format-detection', content: 'telephone=no' },
-      ],
-      link: [{ rel: 'icon', type: 'image/x-icon', href: '/favicon.ico' }],
-    }
-  },
+  devtools: { enabled: false },
 
   css: ['~/assets/css/main.css'],
 
-  modules: [
-    '@nuxt/eslint',
-    '@nuxtjs/prismic',
-    '@nuxtjs/tailwindcss',
-    '@nuxt/fonts',
-    '@nuxt/icon',
-    '@nuxt/scripts',
-    '@nuxtjs/turnstile',
-  ],
-
-  turnstile: {
-    siteKey: process.env.NUXT_TURNSTILE_SITE_KEY || process.env.TURNSTILE_SITE_KEY || '',
+  vite: {
+    plugins: [tailwindcss()],
   },
 
-  prismic: {
-    endpoint: repositoryName,
-    preview: '/api/preview',
-    clientConfig: {
-      routes: [
-        {
-          type: 'case_study',
-          path: '/services/:uid',
-        },
-        {
-          type: 'page',
-          path: '/:uid',
-        },
-        {
-          type: 'page',
-          uid: 'home',
-          path: '/',
-        },
-      ]
-    }
+  site: {
+    url: siteUrl,
+    name: 'YBX Labs',
+    defaultLocale: 'en',
   },
 
-  compatibilityDate: '2025-01-06',
-  
-  // Add runtime config for head management
-  runtimeConfig: {
-    // Private keys (only available on the server-side)
-    // Empty defaults: server reads RAZORPAY_* / NUXT_RAZORPAY_* from process.env at runtime (Cloudflare/NuxtHub)
-    razorpayKeyId: '',
-    razorpayKeySecret: '',
-    razorpayTestKeyId: '',
-    razorpayTestKeySecret: '',
-    razorpayIsSandbox: false,
-    // PhonePe credentials
-    phonepeClientId: process.env.PHONEPE_CLIENT_ID || process.env.NUXT_PHONEPE_CLIENT_ID,
-    phonepeApiKey: process.env.PHONEPE_API_KEY || process.env.NUXT_PHONEPE_API_KEY,
-    // Zoho Payments credentials
-    zohoAccountId: process.env.ZOHO_ACCOUNT_ID || process.env.NUXT_ZOHO_ACCOUNT_ID,
-    zohoApiKey: process.env.ZOHO_API_KEY || process.env.NUXT_ZOHO_API_KEY,
-    zohoSigningKey: process.env.ZOHO_SIGN_KEY || process.env.NUXT_ZOHO_SIGN_KEY,
-    zohoClientId: process.env.ZOHO_CLIENT_ID || process.env.NUXT_ZOHO_CLIENT_ID,
-    zohoClientSecret: process.env.ZOHO_CLIENT_SECRET || process.env.NUXT_ZOHO_CLIENT_SECRET,
-    zohoRefreshToken: process.env.ZOHO_REFRESH_TOKEN || process.env.NUXT_ZOHO_REFRESH_TOKEN,
-    zohoIsSandbox: process.env.ZOHO_IS_SANDBOX === 'true',
-    // Resend
-    resendApiKey: process.env.RESEND_API_KEY,
-    contactEmailTo: process.env.CONTACT_EMAIL_TO || 'hello@ybxlabs.com',
-    contactEmailFrom: process.env.CONTACT_EMAIL_FROM || 'website@ybxlabs.com',
-    // Turnstile secret (server-side only)
-    turnstile: {
-      secretKey:
-        process.env.NUXT_TURNSTILE_SECRET_KEY
-        || process.env.TURNSTILE_SECRET_KEY
-        || ''
+  app: {
+    head: {
+      htmlAttrs: { lang: 'en' },
     },
-    // Public keys (exposed to the client-side)
-    public: {
-      turnstileSiteKey:
-        process.env.NUXT_TURNSTILE_SITE_KEY
-        || process.env.TURNSTILE_SITE_KEY
-        || '',
-      siteUrl: process.env.NUXT_PUBLIC_APP_URL || 
-               process.env.NODE_ENV === 'production' 
-                 ? 'https://ybxlabs.com'  // Replace with your actual domain
-                 : 'http://localhost:3000'
-    }
-  }
-}) 
+  },
+
+  experimental: {
+    // Routes are fixed at build time, so unknown URLs get a cheap, real 404.
+    staticRoutes: true,
+    viewTransition: true,
+    payloadExtraction: false,
+  },
+
+  nitro: {
+    cloudflare: {
+      deployConfig: true,
+      nodeCompat: true,
+      wrangler: isStaging ? { name: 'ybxlabs-website-staging' } : {},
+    },
+    prerender: {
+      // Emit /about-us.html (served at /about-us), not /about-us/index.html.
+      autoSubfolderIndex: false,
+      crawlLinks: true,
+      routes: ['/', '/robots.txt', '/sitemap.xml'],
+    },
+  },
+
+  routeRules: {
+    // Pages ship as HTML and CSS only. Routes that need JavaScript opt back in.
+    '/**': { noScripts: true },
+  },
+
+  skewProtection: false,
+
+  ogImage: {
+    zeroRuntime: true,
+    defaults: { height: 630 },
+  },
+
+  sitemap: {
+    zeroRuntime: true,
+  },
+
+  aiReady: {
+    database: false,
+    zeroRuntimeMarkdown: true,
+  },
+
+  image: {
+    provider: 'ipxStatic',
+    format: ['avif', 'webp'],
+  },
+
+  fonts: {
+    families: [
+      { name: 'Instrument Sans', provider: 'google', weights: ['400 700'], styles: ['normal'], subsets: ['latin'], global: true },
+      { name: 'JetBrains Mono', provider: 'google', weights: [400, 500], styles: ['normal'], subsets: ['latin'], global: true },
+    ],
+  },
+
+  eslint: {
+    config: { stylistic: false },
+  },
+})
