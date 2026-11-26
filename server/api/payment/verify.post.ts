@@ -1,4 +1,5 @@
 import crypto from 'crypto'
+import { fromMinorUnits } from '../../utils/currency'
 import { getPhonePeAccessToken, isValidPhonePeMerchantOrderId } from '../../utils/phonepe'
 import { createRazorpayClient } from '../../utils/razorpay'
 
@@ -98,7 +99,7 @@ export default defineEventHandler(async (event) => {
       gateway: 'razorpay',
       payment_id: razorpay_payment_id,
       order_id: razorpay_order_id,
-      amount: Number(payment.amount) / 100, // Convert back to rupees
+      amount: fromMinorUnits(Number(payment.amount), payment.currency),
       currency: payment.currency,
       status: payment.status,
       method: payment.method,

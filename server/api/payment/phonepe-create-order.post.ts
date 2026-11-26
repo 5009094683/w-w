@@ -1,4 +1,5 @@
 import crypto from 'crypto'
+import { toMinorUnits } from '../../utils/currency'
 
 interface PhonePeCreatePaymentRequest {
   merchantOrderId: string
@@ -57,7 +58,7 @@ export default defineEventHandler(async (event) => {
     // Create payment request as per PhonePe documentation
     const paymentRequest: PhonePeCreatePaymentRequest = {
       merchantOrderId,
-      amount: amount * 100, // PhonePe expects amount in paisa (like Razorpay)
+      amount: toMinorUnits(amount, currency), // PhonePe expects the amount in paise
       expireAfter: 1200, // 20 minutes
       metaInfo: {
         udf1: 'YBX Labs Payment',

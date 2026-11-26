@@ -1,3 +1,4 @@
+import { normalizeCurrency, toMinorUnits } from '../../utils/currency'
 import { getPhonePeAccessToken } from '../../utils/phonepe'
 import { createRazorpayClient, getRazorpayDiagnostics } from '../../utils/razorpay'
 import { verifyTurnstileFromRequest } from '../../utils/turnstile'
@@ -18,7 +19,7 @@ interface ZohoCreateSessionResponse {
 export default defineEventHandler(async (event) => {
   try {
     const body = await readBody(event)
-    const { amount, currency = 'INR', gateway = 'razorpay', turnstileToken } = body
+    const { amount, gateway = 'razorpay', turnstileToken } = body
 
     if (!amount) {
       throw createError({
@@ -26,6 +27,9 @@ export default defineEventHandler(async (event) => {
         statusMessage: 'Amount is required'
       })
     }
+
+    const currency = normalizeCurrency(body.currency ?? 'INR')
+    const amountInMinorUnits = toMinorUnits(amount, currency)
 
     await verifyTurnstileFromRequest(event, turnstileToken)
 
@@ -104,7 +108,9 @@ export default defineEventHandler(async (event) => {
     const { client: razorpay, keyId, useSandbox } = createRazorpayClient(config)
 
     const options = {
-      amount: amount * 100, // Razorpay expects amount in paise
+      // Razorpay expects the smallest unit of the currency: paise for INR,
+      // cents for USD, and whole yen for JPY (which has no smaller unit).
+      amount: amountInMinorUnits,
       currency: currency,
       receipt: `receipt_${Date.now()}`,
       payment_capture: 1
