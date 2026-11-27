@@ -18,7 +18,11 @@
     "postinstall": "nuxt prepare",
     "lint": "eslint .",
     "typecheck": "nuxt typecheck",
-    "test": "vitest run"
+    "test": "vitest run",
+    "check:site": "node scripts/check-site.mjs",
+    "smoke": "node scripts/smoke.mjs",
+    "test:worker": "node scripts/smoke.mjs --serve",
+    "test:e2e": "TURNSTILE_SITE_KEY=e2e-site-key NITRO_PRESET=node-server nuxt build && playwright test"
   },
   "dependencies": {
     "@nuxt/fonts": "^1.2.1",
@@ -30,7 +34,9 @@
     "zod": "^4.6.7"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.14.1",
     "@nuxt/eslint": "^1.17.0",
+    "@playwright/test": "^1.65.1",
     "@tailwindcss/vite": "^4.3.5",
     "@takumi-rs/core": "^2.22.1",
     "eslint": "^10.15.0",
