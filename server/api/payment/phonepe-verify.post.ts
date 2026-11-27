@@ -1,3 +1,5 @@
+import { isValidPhonePeMerchantOrderId } from '../../utils/phonepe'
+
 interface PhonePeOrderStatusResponse {
   orderId: string
   state: string
@@ -42,8 +44,16 @@ export default defineEventHandler(async (event) => {
       })
     }
 
+    // The ID becomes part of the request path, so only accept PhonePe's own format.
+    if (!isValidPhonePeMerchantOrderId(merchantOrderId)) {
+      throw createError({
+        statusCode: 400,
+        statusMessage: 'Invalid PhonePe order ID'
+      })
+    }
+
     // PhonePe Order Status API endpoint (PROD) - as per documentation
-    const statusUrl = `https://api.phonepe.com/apis/pg/checkout/v2/order/${merchantOrderId}/status`
+    const statusUrl = `https://api.phonepe.com/apis/pg/checkout/v2/order/${encodeURIComponent(merchantOrderId)}/status`
 
     const response = await $fetch<PhonePeOrderStatusResponse>(statusUrl, {
       method: 'GET',

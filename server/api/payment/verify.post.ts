@@ -1,4 +1,6 @@
 import crypto from 'crypto'
+import { fromMinorUnits } from '../../utils/currency'
+import { getPhonePeAccessToken, isValidPhonePeMerchantOrderId } from '../../utils/phonepe'
 import { createRazorpayClient } from '../../utils/razorpay'
 
 export default defineEventHandler(async (event) => {
@@ -31,14 +33,24 @@ export default defineEventHandler(async (event) => {
 
     // Handle PhonePe verification
     if (gateway === 'phonepe') {
-      const { merchantOrderId, accessToken } = body
+      const { merchantOrderId } = body
 
-      if (!merchantOrderId || !accessToken) {
+      if (!merchantOrderId) {
         throw createError({
           statusCode: 400,
           statusMessage: 'Missing required PhonePe verification parameters'
         })
       }
+
+      if (!isValidPhonePeMerchantOrderId(merchantOrderId)) {
+        throw createError({
+          statusCode: 400,
+          statusMessage: 'Invalid PhonePe order ID'
+        })
+      }
+
+      // The browser never holds a PhonePe token, so request one here.
+      const accessToken = await getPhonePeAccessToken(useRuntimeConfig())
 
       const phonepeResponse = await $fetch('/api/payment/phonepe-verify', {
         method: 'POST',
@@ -87,7 +99,7 @@ export default defineEventHandler(async (event) => {
       gateway: 'razorpay',
       payment_id: razorpay_payment_id,
       order_id: razorpay_order_id,
-      amount: Number(payment.amount) / 100, // Convert back to rupees
+      amount: fromMinorUnits(Number(payment.amount), payment.currency),
       currency: payment.currency,
       status: payment.status,
       method: payment.method,
