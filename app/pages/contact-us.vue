@@ -30,12 +30,10 @@ const address = `C/O ${site.address.careOf}, ${site.address.street}, ${site.addr
             <span class="label-accent mr-3">01</span>Send a message
           </h2>
           <ContactForm />
-          <noscript>
-            <p class="mt-6 border border-rule-strong p-4">
-              This form needs JavaScript. You can email us at
-              <a class="link" :href="`mailto:${site.contact.email}`">{{ site.contact.email }}</a> instead.
-            </p>
-          </noscript>
+          <p class="needs-script mt-6 border border-rule-strong p-4">
+            This form needs JavaScript. You can email us at
+            <a class="link" :href="`mailto:${site.contact.email}`">{{ site.contact.email }}</a> instead.
+          </p>
         </div>
 
         <aside class="lg:col-span-5 lg:pl-4">

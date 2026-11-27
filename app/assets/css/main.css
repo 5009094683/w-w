@@ -235,6 +235,17 @@
     border-color: var(--accent);
   }
 
+  /* A note shown only where scripts are switched off. */
+  .needs-script {
+    display: none;
+  }
+
+  @media (scripting: none) {
+    .needs-script {
+      display: block;
+    }
+  }
+
   /* Rendered Markdown and other rich text. */
   .prose {
     max-width: 44rem;

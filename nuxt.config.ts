@@ -108,6 +108,11 @@ export default defineNuxtConfig({
     '/contact-us': { noScripts: false, prerender: true },
     '/api/**': { headers: { 'X-Robots-Tag': 'noindex' } },
 
+    // Image files keep their address when replaced, so they are cached for a
+    // month, not forever. Rename an image to show a new version at once.
+    '/_ipx/**': { headers: { 'Cache-Control': 'public, max-age=2592000, stale-while-revalidate=604800' } },
+    '/images/**': { headers: { 'Cache-Control': 'public, max-age=2592000, stale-while-revalidate=604800' } },
+
     // Payment pages are rendered on request, need scripts and stay out of search.
     '/payment': { noScripts: false, prerender: false, robots: false },
     '/payment/**': { noScripts: false, prerender: false, robots: false },
@@ -182,8 +187,8 @@ export default defineNuxtConfig({
 
   fonts: {
     families: [
-      { name: 'Instrument Sans', provider: 'google', weights: ['400 700'], styles: ['normal'], subsets: ['latin'], global: true },
-      { name: 'JetBrains Mono', provider: 'google', weights: [400, 500], styles: ['normal'], subsets: ['latin'], global: true },
+      { name: 'Instrument Sans', provider: 'google', weights: ['400 700'], styles: ['normal'], subsets: ['latin'], global: true, preload: true },
+      { name: 'JetBrains Mono', provider: 'google', weights: [400, 500], styles: ['normal'], subsets: ['latin'], global: true, preload: true },
     ],
   },
 

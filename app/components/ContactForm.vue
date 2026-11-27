@@ -9,6 +9,9 @@ const checkRequired = !import.meta.dev
 const emptyForm = () => ({ name: '', email: '', company: '', phone: '', message: '' })
 
 const form = reactive(emptyForm())
+// The security check loads when the visitor first touches the form, so the
+// page itself opens without any third-party script.
+const started = ref(false)
 const token = ref('')
 const status = ref<'idle' | 'sending' | 'sent' | 'error'>('idle')
 const errorMessage = ref('')
@@ -59,7 +62,7 @@ async function submit() {
       </button>
     </div>
 
-    <form v-else class="space-y-5" @submit.prevent="submit">
+    <form v-else class="space-y-5" @submit.prevent="submit" @focusin="started = true" @pointerenter="started = true">
       <div class="grid gap-5 sm:grid-cols-2">
         <div>
           <label for="contact-name" class="label mb-2 block text-ink">Name <span class="text-accent-ink">*</span></label>
@@ -96,7 +99,8 @@ async function submit() {
         The form is not available right now. Please email
         <a class="link" :href="`mailto:${site.contact.email}`">{{ site.contact.email }}</a> instead.
       </p>
-      <TurnstileWidget v-else-if="checkRequired" ref="widget" :site-key="siteKey" @token="token = $event" />
+      <TurnstileWidget v-else-if="checkRequired && started" ref="widget" :site-key="siteKey" @token="token = $event" />
+      <div v-else-if="checkRequired" class="min-h-[65px]" />
 
       <p v-if="status === 'error'" role="alert" class="border-l-2 border-accent pl-4 text-accent-ink">
         {{ errorMessage }} You can also email
