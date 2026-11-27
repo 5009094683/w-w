@@ -5,8 +5,10 @@
 # is" are as published on the previous site. They say the endpoint handles
 # billions of requests per second and gives 200+ LLMs at 50% less price:
 # please confirm or replace them.
-# "What an AI gateway is", the request example, "Who it is for" and the FAQ are
-# new copy: please review.
+# "What an AI gateway is", "Who it is for" and the FAQ are new copy: please review.
+# The request example shows the OpenAI format against OpenAI's own address,
+# because the previous site did not publish the FlavorAI API's address, paths
+# or model names. Please replace it with a real FlavorAI API request.
 title: "FlavorAI API: one API for all your AI models"
 description: >-
   Get access to 200+ LLMs at 50% less price in single API. We can handle
@@ -81,19 +83,21 @@ Use our infrastructure with enterprise licensing, and host it on your own server
 2. Customize the platform, internal users, API behavior and other settings through the GUI.
 3. Create your API and start using it, with the unified OpenAI API structure, without writing a single piece of code.
 
-A request to the finished API has the same shape as a request to OpenAI. In this illustration, `YOUR-FLAVORAI-HOST` stands for the address of your own installation and the key is a placeholder:
+The OpenAI API structure is the request format that OpenAI documents for its own API. For reference, this is a chat request in that format, as it is sent to OpenAI itself:
 
 ```bash
-curl -X POST "https://YOUR-FLAVORAI-HOST/v1/chat/completions" \
-  -H "Authorization: Bearer sk-xxxxx" \
+curl https://api.openai.com/v1/chat/completions \
+  -H "Authorization: Bearer $OPENAI_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "gpt-4o",
+    "model": "MODEL_NAME",
     "messages": [
       { "role": "user", "content": "Hello" }
     ]
   }'
 ```
+
+With the FlavorAI API, a request in the same structure goes to the single endpoint of your own installation.
 
 ## Who it is for
 
