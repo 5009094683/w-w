@@ -1,0 +1,119 @@
+<script setup lang="ts">
+import { site } from '#content/site'
+
+const config = useRuntimeConfig()
+const siteKey = config.public.turnstileSiteKey
+// In development the server skips the check, so the form works without keys.
+const checkRequired = !import.meta.dev
+
+const emptyForm = () => ({ name: '', email: '', company: '', phone: '', message: '' })
+
+const form = reactive(emptyForm())
+// The security check loads when the visitor first touches the form, so the
+// page itself opens without any third-party script.
+const started = ref(false)
+const token = ref('')
+const status = ref<'idle' | 'sending' | 'sent' | 'error'>('idle')
+const errorMessage = ref('')
+const widget = ref<{ reset: () => void }>()
+
+const unavailable = checkRequired && !siteKey
+const canSubmit = computed(() => status.value !== 'sending' && (!checkRequired || token.value !== ''))
+
+async function submit() {
+  if (!canSubmit.value) {
+    return
+  }
+
+  status.value = 'sending'
+  errorMessage.value = ''
+
+  try {
+    await $fetch('/api/contact', {
+      method: 'POST',
+      body: { ...form, turnstileToken: token.value },
+    })
+    status.value = 'sent'
+    Object.assign(form, emptyForm())
+  } catch (error) {
+    errorMessage.value = fetchErrorMessage(error, 'Your message could not be sent.')
+    status.value = 'error'
+  } finally {
+    // A token can be used once, so ask for a new one after every attempt.
+    widget.value?.reset()
+  }
+}
+</script>
+
+<template>
+  <div>
+    <div v-if="status === 'sent'" role="status" class="border border-rule-strong p-6 md:p-8">
+      <p class="label label-accent">
+        Sent
+      </p>
+      <p class="mt-3 text-[1.5rem] font-semibold tracking-[-0.02em]">
+        Thank you. Your message is on its way.
+      </p>
+      <p class="mt-2 text-soft">
+        {{ site.contact.responseTime }}
+      </p>
+      <button type="button" class="btn btn-secondary mt-6" @click="status = 'idle'">
+        Send another message
+      </button>
+    </div>
+
+    <form v-else class="space-y-5" @submit.prevent="submit" @focusin="started = true" @pointerenter="started = true">
+      <div class="grid gap-5 sm:grid-cols-2">
+        <div>
+          <label for="contact-name" class="label mb-2 block text-ink">Name <span class="text-accent-ink">*</span></label>
+          <input id="contact-name" v-model.trim="form.name" type="text" name="name" autocomplete="name" required maxlength="100" class="field">
+        </div>
+        <div>
+          <label for="contact-email" class="label mb-2 block text-ink">Email <span class="text-accent-ink">*</span></label>
+          <input id="contact-email" v-model.trim="form.email" type="email" name="email" autocomplete="email" required maxlength="254" class="field">
+        </div>
+        <div>
+          <label for="contact-company" class="label mb-2 block text-ink">Company</label>
+          <input id="contact-company" v-model.trim="form.company" type="text" name="company" autocomplete="organization" maxlength="150" class="field">
+        </div>
+        <div>
+          <label for="contact-phone" class="label mb-2 block text-ink">Phone</label>
+          <input id="contact-phone" v-model.trim="form.phone" type="tel" name="phone" autocomplete="tel" maxlength="40" class="field">
+        </div>
+      </div>
+      <div>
+        <label for="contact-message" class="label mb-2 block text-ink">Message <span class="text-accent-ink">*</span></label>
+        <textarea
+          id="contact-message"
+          v-model.trim="form.message"
+          name="message"
+          rows="7"
+          required
+          maxlength="5000"
+          placeholder="Tell us about your project, timeline, and budget..."
+          class="field resize-y"
+        />
+      </div>
+
+      <p v-if="unavailable" role="alert" class="border border-rule-strong p-4 text-soft">
+        The form is not available right now. Please email
+        <a class="link" :href="`mailto:${site.contact.email}`">{{ site.contact.email }}</a> instead.
+      </p>
+      <TurnstileWidget v-else-if="checkRequired && started" ref="widget" :site-key="siteKey" @token="token = $event" />
+      <div v-else-if="checkRequired" class="min-h-[65px]" />
+
+      <div v-if="status === 'error'" role="alert" class="border-l-2 border-accent pl-4 text-accent-ink">
+        <p>{{ errorMessage }}</p>
+        <p class="mt-1">
+          Our email address is
+          <a class="underline" :href="`mailto:${site.contact.email}`">{{ site.contact.email }}</a>.
+        </p>
+      </div>
+
+      <button type="submit" class="btn btn-primary" :disabled="!canSubmit || unavailable">
+        {{ status === 'sending' ? 'Sending…' : 'Send message' }}
+        <AppIcon v-if="status !== 'sending'" name="arrow-right" class="arrow" />
+      </button>
+    </form>
+  </div>
+</template>

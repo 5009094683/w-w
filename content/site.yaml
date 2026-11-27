@@ -1,0 +1,63 @@
+# Company facts, written once and reused by the header, footer, contact page
+# and the structured data on every page. Only add facts here that are true and
+# that you are happy to publish.
+
+name: YBX Labs
+formerName: YesbhautikX
+tagline: Unified Tech Innovation, Always at Your Side!
+description: >-
+  YBX Labs is a technology company in Gujarat, India. It builds the AI products
+  FlavorGPT and FlavorAI and provides engineering services in AI and machine
+  learning, Web3, software architecture and open source.
+
+registration:
+  scheme: Udyam Registration (MSME, Government of India)
+  number: UDYAM-GJ-30-0012290
+
+# From the Careers page ("Remote-first") and the Terms & Conditions (section 8).
+workingModel: Remote-first
+governingLaw: India, with the courts of Ahmedabad, Gujarat
+
+address:
+  careOf: Hitendra Bavadiya
+  street: Jaragali
+  locality: Gir Gadhada
+  district: Gir Somnath
+  region: Gujarat
+  postalCode: "362530"
+  country: India
+  countryCode: IN
+
+contact:
+  email: hi@yesbhautik.co.in
+  phone: +91 63535 86391
+  telegram:
+    handle: "@yesbhautik"
+    url: https://t.me/yesbhautik
+  responseTime: We typically respond within 24 hours on business days. For urgent matters, reach out on Telegram.
+
+social:
+  - name: Telegram
+    url: https://t.me/yesbhautik
+    icon: telegram
+  - name: LinkedIn
+    url: https://www.linkedin.com/company/ybxlabs
+    icon: linkedin
+  - name: GitHub
+    url: https://github.com/YBXLabs
+    icon: github
+  - name: X
+    url: https://x.com/ybxlabs
+    icon: x
+
+navigation:
+  - label: Services
+    href: /services
+  - label: Products
+    href: /products
+  - label: Pricing
+    href: /pricing
+  - label: About
+    href: /about-us
+  - label: Careers
+    href: /careers

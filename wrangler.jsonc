@@ -1,0 +1,16 @@
+{
+  // Source for the Worker configuration. `npm run build:cloudflare` merges this
+  // with the entry point and static-asset settings and writes the result to
+  // .output/server/wrangler.json, which `wrangler dev` and `wrangler deploy` use.
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "ybxlabs-website",
+  "compatibility_date": "2026-11-26",
+  "observability": {
+    "enabled": true,
+    "logs": { "enabled": true, "head_sampling_rate": 1 },
+    "traces": { "enabled": true, "head_sampling_rate": 0.1 }
+  },
+  // Secrets and variables are managed on the Worker (dashboard or `wrangler secret put`),
+  // never in this file. keep_vars stops a deploy from deleting plain-text variables set there.
+  "keep_vars": true
+}

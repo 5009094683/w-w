@@ -1,164 +1,99 @@
-import { createRazorpayClient, getRazorpayDiagnostics } from '../../utils/razorpay'
-import { verifyTurnstileFromRequest } from '../../utils/turnstile'
-import { assertZohoAccountConfigured, getZohoAccessToken, getZohoPaymentsApiUrl } from '../../utils/zoho-payments'
+import { z } from 'zod'
+import { normalizeCurrency, toMinorUnits } from '#shared/utils/currency'
+import { createPhonePeOrder, newPhonePeOrderId, phonepeConfig } from '../../utils/gateways/phonepe'
+import { createRazorpayOrder, razorpayConfig } from '../../utils/gateways/razorpay'
+import { createZohoSession, zohoConfig } from '../../utils/gateways/zoho'
+import { toPaymentError } from '../../utils/payment-errors'
+import { requireTurnstile } from '../../utils/security'
 
-interface ZohoCreateSessionResponse {
-  code: number
-  message: string
-  payments_session: {
-    payments_session_id: string
-    currency: string
-    amount: string
-    reference_number?: string
-    expiry_time?: number
-  }
-}
+const bodySchema = z.object({
+  amount: z.union([z.number(), z.string()]),
+  currency: z.string().optional(),
+  gateway: z.enum(['razorpay', 'phonepe', 'zoho']).optional(),
+  turnstileToken: z.string().optional(),
+})
 
+/**
+ * Starts a payment. Only this route and /api/payment/verify are public; every
+ * gateway call happens here on the server and no gateway token is returned.
+ */
 export default defineEventHandler(async (event) => {
   try {
-    const body = await readBody(event)
-    const { amount, currency = 'INR', gateway = 'razorpay', turnstileToken } = body
-
-    if (!amount) {
-      throw createError({
-        statusCode: 400,
-        statusMessage: 'Amount is required'
-      })
+    const parsed = bodySchema.safeParse(await readBody(event))
+    if (!parsed.success) {
+      throw createError({ statusCode: 400, statusMessage: 'Amount is required' })
     }
 
-    await verifyTurnstileFromRequest(event, turnstileToken)
+    const currency = normalizeCurrency(parsed.data.currency ?? 'INR')
+    const amountInMinorUnits = toMinorUnits(parsed.data.amount, currency)
+    const amount = Number(parsed.data.amount)
+    // PhonePe and Zoho Payments take rupees only; any other currency goes to Razorpay.
+    const gateway = currency === 'INR' ? parsed.data.gateway ?? 'razorpay' : 'razorpay'
 
-    const config = useRuntimeConfig()
+    await requireTurnstile(event, parsed.data.turnstileToken)
 
-    // If Zoho Payments is selected and currency is INR
-    if (gateway === 'zoho' && currency === 'INR') {
-      if (!config.zohoAccountId || !config.zohoApiKey) {
-        throw createError({
-          statusCode: 500,
-          statusMessage: 'Zoho Payments not configured'
-        })
-      }
-
-      assertZohoAccountConfigured(config)
-      const accessToken = await getZohoAccessToken(config)
+    if (gateway === 'zoho') {
+      const config = zohoConfig(event)
       const referenceNumber = `YBX-${Date.now()}`
-      const sessionUrl = getZohoPaymentsApiUrl(config, 'paymentsessions')
-
-      const response = await $fetch<ZohoCreateSessionResponse>(sessionUrl, {
-        method: 'POST',
-        headers: {
-          Authorization: `Zoho-oauthtoken ${accessToken}`,
-          'Content-Type': 'application/json'
-        },
-        body: {
-          amount,
-          currency: 'INR',
-          description: `Payment of INR ${amount} for YBX Labs`,
-          reference_number: referenceNumber
-        }
-      })
-
-      const session = response.payments_session
+      const session = await createZohoSession(config, { amount, referenceNumber })
 
       return {
         success: true,
-        gateway: 'zoho',
+        gateway,
         payment_session_id: session.payments_session_id,
         order_id: session.payments_session_id,
         amount: Number(session.amount),
         currency: session.currency,
         reference_number: session.reference_number || referenceNumber,
-        account_id: config.zohoAccountId,
-        api_key: config.zohoApiKey,
-        is_test_mode: !!config.zohoIsSandbox
+        account_id: config.accountId,
+        api_key: config.apiKey,
+        is_test_mode: config.sandbox,
       }
     }
 
-    // If PhonePe is selected and currency is INR
-    if (gateway === 'phonepe' && currency === 'INR') {
-      // First get PhonePe access token
-      const authResponse = await $fetch('/api/payment/phonepe-auth', {
-        method: 'POST'
-      }) as any
+    if (gateway === 'phonepe') {
+      const config = phonepeConfig(event)
+      const merchantOrderId = newPhonePeOrderId()
+      const returnUrl = new URL('/payment/success', getRequestURL(event))
+      returnUrl.searchParams.set('gateway', 'phonepe')
+      returnUrl.searchParams.set('order', merchantOrderId)
 
-      if (!authResponse.success) {
-        throw new Error('Failed to authenticate with PhonePe')
-      }
-
-      // Create PhonePe payment order
-      const phonepeResponse = await $fetch('/api/payment/phonepe-create-order', {
-        method: 'POST',
-        body: {
-          amount,
-          accessToken: authResponse.accessToken
-        }
-      }) as any
+      const order = await createPhonePeOrder(config, {
+        merchantOrderId,
+        amountInPaise: amountInMinorUnits,
+        displayAmount: String(parsed.data.amount),
+        redirectUrl: returnUrl.toString(),
+      })
 
       return {
         success: true,
-        gateway: 'phonepe',
-        order_id: phonepeResponse.order_id,
-        merchant_order_id: phonepeResponse.merchant_order_id,
-        amount: phonepeResponse.amount,
-        currency: phonepeResponse.currency,
-        redirect_url: phonepeResponse.redirect_url,
-        access_token: authResponse.accessToken // Pass token for verification later
+        gateway,
+        order_id: order.orderId,
+        merchant_order_id: merchantOrderId,
+        amount,
+        currency,
+        redirect_url: order.redirectUrl,
       }
     }
 
-    // For Razorpay (default) or non-INR currencies
-    const { client: razorpay, keyId, useSandbox } = createRazorpayClient(config)
-
-    const options = {
-      amount: amount * 100, // Razorpay expects amount in paise
-      currency: currency,
-      receipt: `receipt_${Date.now()}`,
-      payment_capture: 1
-    }
-
-    const order = await razorpay.orders.create(options)
+    const config = razorpayConfig(event)
+    const order = await createRazorpayOrder(config, {
+      // The smallest unit of the currency: paise for INR, cents for USD, whole yen for JPY.
+      amount: amountInMinorUnits,
+      currency,
+      receipt: `receipt_${Date.now()}_${crypto.randomUUID().slice(0, 8)}`,
+    })
 
     return {
       success: true,
-      gateway: 'razorpay',
+      gateway,
       order_id: order.id,
       amount: order.amount,
       currency: order.currency,
-      key_id: keyId,
-      is_test_mode: useSandbox
+      key_id: config.keyId,
+      is_test_mode: config.sandbox,
     }
-  } catch (error: any) {
-    console.error('Payment order creation error:', error)
-
-    if (error.data) {
-      console.error('Payment order creation error response:', error.data)
-    }
-
-    const razorpayMessage = error?.error?.description
-    let statusMessage = razorpayMessage
-      || error.statusMessage
-      || error.message
-      || 'Failed to create payment order'
-
-    const isRazorpayAuthError =
-      error.statusCode === 401 || razorpayMessage === 'Authentication failed'
-
-    if (isRazorpayAuthError) {
-      const diagnostics = getRazorpayDiagnostics(useRuntimeConfig())
-      console.error('Razorpay auth failed. Server config:', diagnostics)
-
-      statusMessage =
-        `Razorpay authentication failed on server (${diagnostics.mode} mode, key ${diagnostics.key_id_prefix}). `
-        + 'The Key ID and Key Secret on hosting must be from the same Razorpay API key pair. '
-        + 'Compare secret_fingerprint with local, or paste fresh values from Dashboard → API Keys → Live.'
-    }
-
-    throw createError({
-      statusCode: error.statusCode || 500,
-      statusMessage,
-      data: isRazorpayAuthError
-        ? { razorpay: getRazorpayDiagnostics(useRuntimeConfig()) }
-        : undefined
-    })
+  } catch (error) {
+    throw toPaymentError(error)
   }
-}) 
+})

@@ -1,0 +1,66 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: Lint, test, build and check the site
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Type check
+        run: npm run typecheck
+
+      - name: Unit tests
+        run: npm test
+
+      # The build used for deployment, then every built page is checked.
+      - name: Build for Cloudflare Workers
+        run: npm run build:cloudflare
+        env:
+          # Cloudflare's public test key, so the contact page builds with a security check.
+          TURNSTILE_SITE_KEY: 1x00000000000000000000AA
+
+      - name: Check every built page
+        run: npm run check:site
+
+      - name: Check the Worker over HTTP
+        run: npm run test:worker
+
+      # Browser tests rebuild the site for Node and answer every outside service locally.
+      - name: Install the test browser
+        run: npx playwright install --with-deps chromium
+
+      - name: Browser and accessibility tests
+        run: npm run test:e2e
+
+      - name: Keep the browser test report
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-report
+          path: playwright-report
+          retention-days: 7
