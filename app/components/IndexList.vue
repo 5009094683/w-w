@@ -6,20 +6,34 @@ defineProps<{
 </script>
 
 <template>
+  <!--
+    The link wraps only the title, and its ::before covers the row, so the whole
+    row is clickable while the link text is the name of the page it leads to.
+    Each part is its own paragraph, so a text or Markdown copy of the page
+    reads "code, title, summary" on separate lines, not as one run of words.
+  -->
   <ul class="border-t border-rule-strong">
     <li v-for="item in items" :key="item.to" class="border-b border-rule">
-      <NuxtLink :to="item.to" class="index-row group transition-colors hover:bg-wash">
-        <span class="index-code label label-accent">{{ item.code }}</span>
-        <span class="index-title text-[1.2rem] font-semibold leading-snug tracking-[-0.01em]">
-          {{ item.title }}
-          <span v-if="item.meta" class="label mt-1 block normal-case tracking-normal">{{ item.meta }}</span>
-        </span>
-        <span class="index-text text-soft">{{ item.text }}</span>
+      <div class="index-row group relative transition-colors hover:bg-wash">
+        <p class="index-code label label-accent">
+          {{ item.code }}
+        </p>
+        <div class="index-title">
+          <p class="text-[1.2rem] font-semibold leading-snug tracking-[-0.01em]">
+            <NuxtLink :to="item.to" class="row-link">{{ item.title }}</NuxtLink>
+          </p>
+          <p v-if="item.meta" class="label mt-1 normal-case tracking-normal">
+            {{ item.meta }}
+          </p>
+        </div>
+        <p class="index-text text-soft">
+          {{ item.text }}
+        </p>
         <AppIcon
           name="arrow-right"
           class="index-arrow text-[1.25rem] text-faint transition-transform group-hover:translate-x-1 group-hover:text-accent-ink"
         />
-      </NuxtLink>
+      </div>
     </li>
   </ul>
 </template>

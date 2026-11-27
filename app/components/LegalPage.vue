@@ -41,7 +41,7 @@ const others = legal.filter(item => item.slug !== props.slug)
       <ul class="border-t border-rule-strong">
         <li v-for="item in others" :key="item.slug" class="border-b border-rule">
           <NuxtLink :to="item.path" class="group flex items-center justify-between gap-4 py-5 text-[1.2rem] font-semibold tracking-[-0.01em]">
-            {{ item.heading }}
+            <span>{{ item.heading }}</span>
             <AppIcon name="arrow-right" class="text-faint transition-transform group-hover:translate-x-1 group-hover:text-accent-ink" />
           </NuxtLink>
         </li>

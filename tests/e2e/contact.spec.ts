@@ -25,7 +25,7 @@ test.describe('contact page', () => {
 
   test('shows the published contact details', async ({ page }) => {
     await page.goto('/contact-us')
-    const details = page.locator('aside')
+    const details = page.locator('#contact-details')
 
     await expect(details.getByRole('link', { name: 'hi@yesbhautik.co.in' })).toHaveAttribute('href', 'mailto:hi@yesbhautik.co.in')
     await expect(details.getByRole('link', { name: '+91 63535 86391' })).toHaveAttribute('href', 'tel:+916353586391')

@@ -71,27 +71,23 @@ const questions = faq.groups.flatMap(group => group.items).filter(item => item.h
             </NuxtLink>
           </div>
         </div>
-        <aside class="lg:col-span-5 lg:pl-4">
+        <div class="lg:col-span-5 lg:pl-4">
           <SpecTable :facts="record" caption="Company record" />
-        </aside>
+        </div>
       </div>
     </section>
 
     <PageSection number="01" :label="home.products.heading" title="What we make" :lead="home.products.lead.html">
       <IndexList :items="productIndex" />
       <p class="mt-6">
-        <NuxtLink to="/products" class="link font-medium">
-          Compare the products
-        </NuxtLink>
+        <NuxtLink to="/products" class="link font-medium">Compare the products</NuxtLink>
       </p>
     </PageSection>
 
     <PageSection number="02" :label="home.services.heading" title="What we do for other teams" :lead="home.services.lead.html">
       <IndexList :items="serviceIndex" />
       <p class="mt-6">
-        <NuxtLink to="/services" class="link font-medium">
-          Find the right service
-        </NuxtLink>
+        <NuxtLink to="/services" class="link font-medium">Find the right service</NuxtLink>
       </p>
     </PageSection>
 

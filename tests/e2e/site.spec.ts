@@ -81,6 +81,35 @@ test.describe('navigation', () => {
     await context.close()
   })
 
+  test('a row in a list of pages has one link, named after the page, and is clickable anywhere', async ({ page }) => {
+    await page.goto('/')
+    const row = page.locator('.index-row', { hasText: 'P-01' })
+
+    await expect(row.getByRole('link')).toHaveCount(1)
+    await expect(row.getByRole('link')).toHaveAccessibleName('FlavorGPT')
+
+    // Click over the summary, well away from the title.
+    const box = (await row.boundingBox())!
+    await row.click({ position: { x: box.width * 0.75, y: box.height / 2 } })
+    await expect(page).toHaveURL(/\/products\/flavorgpt$/)
+  })
+
+  test('a related-page card is clickable anywhere, and reachable with the keyboard', async ({ page }) => {
+    await page.goto('/services/development')
+    const link = page.getByRole('link', { name: 'Technology consulting', exact: true })
+    const card = page.locator('li', { has: link })
+
+    // Click the bottom corner of the card, away from the title.
+    const box = (await card.boundingBox())!
+    await card.click({ position: { x: box.width - 12, y: box.height - 12 } })
+    await expect(page).toHaveURL(/\/services\/consulting$/)
+
+    await page.goto('/services/development')
+    await link.focus()
+    await page.keyboard.press('Enter')
+    await expect(page).toHaveURL(/\/services\/consulting$/)
+  })
+
   test('marks the current section in the menu', async ({ page }) => {
     await page.goto('/services/development')
 

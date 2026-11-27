@@ -27,7 +27,7 @@ const address = `C/O ${site.address.careOf}, ${site.address.street}, ${site.addr
       <div class="wrap grid gap-x-10 gap-y-14 py-12 md:py-16 lg:grid-cols-12">
         <div class="lg:col-span-7">
           <h2 class="label mb-6">
-            <span class="label-accent mr-3">01</span>Send a message
+            <span class="label-accent mr-1">01</span> Send a message
           </h2>
           <ContactForm />
           <p class="needs-script mt-6 border border-rule-strong p-4">
@@ -36,47 +36,29 @@ const address = `C/O ${site.address.careOf}, ${site.address.street}, ${site.addr
           </p>
         </div>
 
-        <aside class="lg:col-span-5 lg:pl-4">
+        <!-- Not an <aside>: these are the page's main facts, and the Markdown copy of the page leaves asides out. -->
+        <div id="contact-details" class="lg:col-span-5 lg:pl-4">
           <h2 class="label mb-6">
-            <span class="label-accent mr-3">02</span>Reach us directly
+            <span class="label-accent mr-1">02</span> Reach us directly
           </h2>
           <div class="border border-rule-strong">
-            <dl>
-              <div class="grid gap-x-4 gap-y-1 border-b border-rule px-4 py-3.5 sm:grid-cols-[7rem_1fr]">
-                <dt class="label pt-[0.2rem]">
-                  Email
-                </dt>
-                <dd><a class="link" :href="`mailto:${site.contact.email}`">{{ site.contact.email }}</a></dd>
-              </div>
-              <div class="grid gap-x-4 gap-y-1 border-b border-rule px-4 py-3.5 sm:grid-cols-[7rem_1fr]">
-                <dt class="label pt-[0.2rem]">
-                  Telegram
-                </dt>
-                <dd><a class="link" :href="site.contact.telegram.url" rel="noopener">{{ site.contact.telegram.handle }}</a></dd>
-              </div>
-              <div class="grid gap-x-4 gap-y-1 border-b border-rule px-4 py-3.5 sm:grid-cols-[7rem_1fr]">
-                <dt class="label pt-[0.2rem]">
-                  Phone
-                </dt>
-                <dd><a class="link" :href="telHref(site.contact.phone)">{{ site.contact.phone }}</a></dd>
-              </div>
-              <div class="grid gap-x-4 gap-y-1 border-b border-rule px-4 py-3.5 sm:grid-cols-[7rem_1fr]">
-                <dt class="label pt-[0.2rem]">
-                  Address
-                </dt>
-                <dd>
-                  <address class="not-italic">
-                    {{ address }}
-                  </address>
-                </dd>
-              </div>
-              <div class="grid gap-x-4 gap-y-1 px-4 py-3.5 sm:grid-cols-[7rem_1fr]">
-                <dt class="label pt-[0.2rem]">
-                  Registration
-                </dt>
-                <dd>{{ site.registration.number }}</dd>
-              </div>
-            </dl>
+            <ul>
+              <li class="grid gap-x-4 gap-y-1 border-b border-rule px-4 py-3.5 sm:grid-cols-[7rem_1fr]">
+                <strong class="label pt-[0.2rem]">Email<span class="sr-only">:</span></strong> <span><a class="link" :href="`mailto:${site.contact.email}`">{{ site.contact.email }}</a></span>
+              </li>
+              <li class="grid gap-x-4 gap-y-1 border-b border-rule px-4 py-3.5 sm:grid-cols-[7rem_1fr]">
+                <strong class="label pt-[0.2rem]">Telegram<span class="sr-only">:</span></strong> <span><a class="link" :href="site.contact.telegram.url" rel="noopener">{{ site.contact.telegram.handle }}</a></span>
+              </li>
+              <li class="grid gap-x-4 gap-y-1 border-b border-rule px-4 py-3.5 sm:grid-cols-[7rem_1fr]">
+                <strong class="label pt-[0.2rem]">Phone<span class="sr-only">:</span></strong> <span><a class="link" :href="telHref(site.contact.phone)">{{ site.contact.phone }}</a></span>
+              </li>
+              <li class="grid gap-x-4 gap-y-1 border-b border-rule px-4 py-3.5 sm:grid-cols-[7rem_1fr]">
+                <strong class="label pt-[0.2rem]">Address<span class="sr-only">:</span></strong> <span>{{ address }}</span>
+              </li>
+              <li class="grid gap-x-4 gap-y-1 px-4 py-3.5 sm:grid-cols-[7rem_1fr]">
+                <strong class="label pt-[0.2rem]">Registration<span class="sr-only">:</span></strong> <span>{{ site.registration.number }}</span>
+              </li>
+            </ul>
           </div>
 
           <p class="mt-6 flex gap-3 text-soft">
@@ -96,7 +78,7 @@ const address = `C/O ${site.address.careOf}, ${site.address.street}, ${site.addr
               </a>
             </li>
           </ul>
-        </aside>
+        </div>
       </div>
     </section>
   </article>

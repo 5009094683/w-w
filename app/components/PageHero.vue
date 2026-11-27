@@ -48,9 +48,10 @@ defineProps<{
         </p>
       </div>
 
-      <aside v-if="$slots.aside" class="min-w-0 lg:col-span-5 lg:pl-4">
+      <!-- Not an <aside>: the fact table is main content, and the Markdown copy of the page leaves asides out. -->
+      <div v-if="$slots.aside" class="min-w-0 lg:col-span-5 lg:pl-4">
         <slot name="aside" />
-      </aside>
+      </div>
     </div>
   </section>
 </template>
