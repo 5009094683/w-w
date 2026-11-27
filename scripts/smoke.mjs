@@ -244,27 +244,36 @@ try {
   }
   check('/payment/100.5JPY explains the problem', (await get('/payment/100.5JPY')).body.includes('JPY amounts cannot have decimals'))
 
-  // Public API: only two payment routes, input checked, nothing done without the security check
-  for (const route of ['phonepe-auth', 'zoho-auth', 'phonepe-create-order', 'phonepe-verify', 'zoho-create-session', 'zoho-verify', 'razorpay-config']) {
-    check(`/api/payment/${route} does not exist`, (await post(`/api/payment/${route}`, {})).status === 404)
-  }
+  // Public API: only two payment routes, input checked, nothing done without the security check.
+  // These checks send requests to payment and contact routes. This site refuses
+  // them before anything happens; another site might not, and the site that
+  // ybxlabs.com served before v2 answered two of them with gateway tokens. So
+  // they run only against a site that is recognisably this one.
+  const llms = await get('/llms.txt', { Accept: 'text/plain' })
+  if (llms.status !== 200 || !(llms.headers.get('content-type') ?? '').includes('text/plain') || !llms.body.startsWith('# ')) {
+    check('the API checks could be run', false, 'this address is not serving the v2 site, so no request was sent to its payment or contact routes')
+  } else {
+    for (const route of ['phonepe-auth', 'zoho-auth', 'phonepe-create-order', 'phonepe-verify', 'zoho-create-session', 'zoho-verify', 'razorpay-config']) {
+      check(`/api/payment/${route} does not exist`, (await post(`/api/payment/${route}`, {})).status === 404)
+    }
 
-  const noToken = await post('/api/payment/create-order', { amount: 100, currency: 'INR' })
-  check('create-order refuses a request without the security check', [403, 503].includes(noToken.status), `status ${noToken.status}`)
-  const badAmount = await post('/api/payment/create-order', { amount: 100.5, currency: 'JPY' })
-  check('create-order rejects 100.5 JPY', badAmount.status === 400 && badAmount.json.statusMessage === 'JPY amounts cannot have decimals', `status ${badAmount.status}`)
-  const badOrder = await post('/api/payment/verify', { gateway: 'phonepe', merchantOrderId: '../../refund' })
-  check('verify rejects a crafted PhonePe order ID', badOrder.status === 400, `status ${badOrder.status}`)
-  const badSignature = await post('/api/payment/verify', { razorpay_order_id: 'order_abc', razorpay_payment_id: 'pay_abc', razorpay_signature: 'not-a-signature' })
-  check('verify rejects a malformed Razorpay signature', badSignature.status === 400, `status ${badSignature.status}`)
-  for (const response of [noToken, badAmount, badOrder, badSignature]) {
-    check('an API error carries no key details', !/rzp_|fingerprint|secret_length|access_token/i.test(response.text))
-  }
+    const noToken = await post('/api/payment/create-order', { amount: 100, currency: 'INR' })
+    check('create-order refuses a request without the security check', [403, 503].includes(noToken.status), `status ${noToken.status}`)
+    const badAmount = await post('/api/payment/create-order', { amount: 100.5, currency: 'JPY' })
+    check('create-order rejects 100.5 JPY', badAmount.status === 400 && badAmount.json.statusMessage === 'JPY amounts cannot have decimals', `status ${badAmount.status}`)
+    const badOrder = await post('/api/payment/verify', { gateway: 'phonepe', merchantOrderId: '../../refund' })
+    check('verify rejects a crafted PhonePe order ID', badOrder.status === 400, `status ${badOrder.status}`)
+    const badSignature = await post('/api/payment/verify', { razorpay_order_id: 'order_abc', razorpay_payment_id: 'pay_abc', razorpay_signature: 'not-a-signature' })
+    check('verify rejects a malformed Razorpay signature', badSignature.status === 400, `status ${badSignature.status}`)
+    for (const response of [noToken, badAmount, badOrder, badSignature]) {
+      check('an API error carries no key details', !/rzp_|fingerprint|secret_length|access_token/i.test(response.text))
+    }
 
-  const badContact = await post('/api/contact', { name: 'Smoke test', email: 'not-an-email', message: 'Hello' })
-  check('contact rejects an invalid email', badContact.status === 400, `status ${badContact.status}`)
-  const noCheck = await post('/api/contact', { name: 'Smoke test', email: 'smoke@example.com', message: 'Hello' })
-  check('contact refuses a message without the security check', [403, 503].includes(noCheck.status), `status ${noCheck.status}`)
+    const badContact = await post('/api/contact', { name: 'Smoke test', email: 'not-an-email', message: 'Hello' })
+    check('contact rejects an invalid email', badContact.status === 400, `status ${badContact.status}`)
+    const noCheck = await post('/api/contact', { name: 'Smoke test', email: 'smoke@example.com', message: 'Hello' })
+    check('contact refuses a message without the security check', [403, 503].includes(noCheck.status), `status ${noCheck.status}`)
+  }
 } catch (error) {
   failed += 1
   console.error(`\nStopped early: ${error.message}${error.cause ? ` (${error.cause.message})` : ''}`)

@@ -49,7 +49,7 @@ That serves the built site at http://localhost:8787 on the Workers runtime. The 
 | `npm test` | Unit tests |
 | `npm run check:site` | Checks every page of the last Cloudflare build |
 | `npm run test:worker` | Starts the last Cloudflare build locally and checks it over HTTP |
-| `npm run smoke -- https://example.com` | Runs the same HTTP checks against a deployed site |
+| `npm run smoke -- https://example.com` | Runs the same HTTP checks against a deployed copy of this site. Pointed at anything else, it only reads pages and skips the checks that send requests to the payment and contact routes |
 | `npm run test:e2e` | Builds the site for Node and runs the browser and accessibility tests |
 | `npm run indexnow` | Tells Bing and other IndexNow search engines which pages changed |
 
