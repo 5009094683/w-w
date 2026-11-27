@@ -6,7 +6,9 @@ const siteKey = config.public.turnstileSiteKey
 // In development the server skips the check, so the form works without keys.
 const checkRequired = !import.meta.dev
 
-const form = reactive({ name: '', email: '', message: '' })
+const emptyForm = () => ({ name: '', email: '', company: '', phone: '', message: '' })
+
+const form = reactive(emptyForm())
 const token = ref('')
 const status = ref<'idle' | 'sending' | 'sent' | 'error'>('idle')
 const errorMessage = ref('')
@@ -29,12 +31,9 @@ async function submit() {
       body: { ...form, turnstileToken: token.value },
     })
     status.value = 'sent'
-    form.name = ''
-    form.email = ''
-    form.message = ''
+    Object.assign(form, emptyForm())
   } catch (error) {
-    const data = (error as { data?: { statusMessage?: string, message?: string } }).data
-    errorMessage.value = data?.statusMessage || data?.message || 'Your message could not be sent.'
+    errorMessage.value = fetchErrorMessage(error, 'Your message could not be sent.')
     status.value = 'error'
   } finally {
     // A token can be used once, so ask for a new one after every attempt.
@@ -61,34 +60,26 @@ async function submit() {
     </div>
 
     <form v-else class="space-y-5" @submit.prevent="submit">
-      <div>
-        <label for="contact-name" class="label mb-2 block text-ink">Name</label>
-        <input
-          id="contact-name"
-          v-model.trim="form.name"
-          type="text"
-          name="name"
-          autocomplete="name"
-          required
-          maxlength="100"
-          class="field"
-        >
+      <div class="grid gap-5 sm:grid-cols-2">
+        <div>
+          <label for="contact-name" class="label mb-2 block text-ink">Name <span class="text-accent-ink">*</span></label>
+          <input id="contact-name" v-model.trim="form.name" type="text" name="name" autocomplete="name" required maxlength="100" class="field">
+        </div>
+        <div>
+          <label for="contact-email" class="label mb-2 block text-ink">Email <span class="text-accent-ink">*</span></label>
+          <input id="contact-email" v-model.trim="form.email" type="email" name="email" autocomplete="email" required maxlength="254" class="field">
+        </div>
+        <div>
+          <label for="contact-company" class="label mb-2 block text-ink">Company</label>
+          <input id="contact-company" v-model.trim="form.company" type="text" name="company" autocomplete="organization" maxlength="150" class="field">
+        </div>
+        <div>
+          <label for="contact-phone" class="label mb-2 block text-ink">Phone</label>
+          <input id="contact-phone" v-model.trim="form.phone" type="tel" name="phone" autocomplete="tel" maxlength="40" class="field">
+        </div>
       </div>
       <div>
-        <label for="contact-email" class="label mb-2 block text-ink">Email</label>
-        <input
-          id="contact-email"
-          v-model.trim="form.email"
-          type="email"
-          name="email"
-          autocomplete="email"
-          required
-          maxlength="254"
-          class="field"
-        >
-      </div>
-      <div>
-        <label for="contact-message" class="label mb-2 block text-ink">Message</label>
+        <label for="contact-message" class="label mb-2 block text-ink">Message <span class="text-accent-ink">*</span></label>
         <textarea
           id="contact-message"
           v-model.trim="form.message"
@@ -96,6 +87,7 @@ async function submit() {
           rows="7"
           required
           maxlength="5000"
+          placeholder="Tell us about your project, timeline, and budget..."
           class="field resize-y"
         />
       </div>
@@ -118,22 +110,3 @@ async function submit() {
     </form>
   </div>
 </template>
-
-<style scoped>
-.field {
-  display: block;
-  width: 100%;
-  padding: 0.75rem 0.875rem;
-  border: 1px solid var(--rule-strong);
-  border-radius: 2px;
-  background-color: var(--paper);
-  color: var(--ink);
-  font: inherit;
-  line-height: 1.4;
-}
-
-.field:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
-}
-</style>

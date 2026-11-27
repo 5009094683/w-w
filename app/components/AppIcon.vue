@@ -3,7 +3,9 @@
 // Brand marks are from Simple Icons (CC0).
 const STROKE = {
   'arrow-right': 'M5 12h14M13 6l6 6-6 6',
+  'arrow-left': 'M19 12H5M11 6l-6 6 6 6',
   'arrow-up-right': 'M7 17 17 7M8 7h9v9',
+  'lock': 'M6 10.5h12v9H6zM8.5 10.5V8a3.5 3.5 0 0 1 7 0v2.5',
   'menu': 'M4 7h16M4 12h16M4 17h16',
   'close': 'M6 6l12 12M18 6 6 18',
   'mail': 'M3.5 6.5h17v11h-17zM3.5 7l8.5 6.5L20.5 7',

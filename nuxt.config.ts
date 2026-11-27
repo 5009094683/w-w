@@ -108,6 +108,11 @@ export default defineNuxtConfig({
     '/contact-us': { noScripts: false, prerender: true },
     '/api/**': { headers: { 'X-Robots-Tag': 'noindex' } },
 
+    // Payment pages are rendered on request, need scripts and stay out of search.
+    '/payment': { noScripts: false, prerender: false, robots: false },
+    '/payment/**': { noScripts: false, prerender: false, robots: false },
+    '/pay': { redirect: { to: '/payment', statusCode: 302 } },
+
     // Pages that moved in v2 keep their old addresses working.
     '/services/flavorai': { redirect: { to: '/products/flavorai', statusCode: 301 } },
     '/services/flavorai-api': { redirect: { to: '/products/flavorai-api', statusCode: 301 } },

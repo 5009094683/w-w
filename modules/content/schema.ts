@@ -6,10 +6,10 @@ import { z } from 'zod'
 
 const text = (min = 1) => z.string().trim().min(min)
 
-const date = z.string().regex(/^\d{4}-\d{2}-\d{2}$/u, 'Use the format YYYY-MM-DD').refine(
-  value => !Number.isNaN(Date.parse(`${value}T00:00:00Z`)),
-  'Not a real date',
-)
+const date = z.string().regex(/^\d{4}-\d{2}-\d{2}$/u, 'Use the format YYYY-MM-DD').refine((value) => {
+  const parsed = new Date(`${value}T00:00:00Z`)
+  return !Number.isNaN(parsed.getTime()) && parsed.toISOString().slice(0, 10) === value
+}, 'Not a real date')
 
 const href = z.string().regex(/^(\/|https:\/\/|mailto:|tel:)/u, 'Use a path starting with / or a full https:, mailto: or tel: link')
 
