@@ -9,12 +9,29 @@
 
 import { spawn } from 'node:child_process'
 import { createHash } from 'node:crypto'
+import { createServer } from 'node:net'
+import { dirname, join } from 'node:path'
+import { fileURLToPath } from 'node:url'
 
 const APPLE_PAY_SHA256 = 'd9a1dbf6d278f12d71f1967ecf0f8cf3fe042d82b5b47ef028542397ca447906'
+const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 const args = process.argv.slice(2)
 const serve = args.includes('--serve')
-const port = 8799
-const base = (serve ? `http://127.0.0.1:${port}` : args.find(arg => /^https?:\/\//.test(arg)) ?? '').replace(/\/+$/, '')
+
+// The local Worker gets a port nothing else is using, so the checks can only
+// ever reach the build that was just started, never an older one left running.
+function freePort() {
+  return new Promise((resolve, reject) => {
+    const probe = createServer()
+    probe.once('error', reject)
+    probe.listen(0, '127.0.0.1', () => {
+      const { port } = probe.address()
+      probe.close(() => resolve(port))
+    })
+  })
+}
+
+const base = (serve ? `http://127.0.0.1:${await freePort()}` : args.find(arg => /^https?:\/\//.test(arg)) ?? '').replace(/\/+$/, '')
 
 if (!base) {
   console.error('Give the address to check, or --serve to start the built Worker locally.')
@@ -49,25 +66,67 @@ async function post(path, body) {
   return { status: response.status, json, text }
 }
 
+let server
+let serverOutput = ''
+const serverExited = () => server.exitCode !== null || server.signalCode !== null
+
+function startServer() {
+  // Started in its own process group, so that stopping it also stops the
+  // Workers runtime that wrangler starts underneath.
+  server = spawn(join(root, 'node_modules/.bin/wrangler'), ['dev', '--port', new URL(base).port, '--ip', '127.0.0.1'], {
+    cwd: root,
+    detached: true,
+    stdio: ['ignore', 'pipe', 'pipe'],
+  })
+  for (const stream of [server.stdout, server.stderr]) {
+    stream.on('data', (chunk) => {
+      serverOutput = (serverOutput + chunk).slice(-4000)
+    })
+  }
+}
+
 async function waitUntilUp() {
-  for (let attempt = 0; attempt < 90; attempt += 1) {
+  for (let attempt = 0; attempt < 180; attempt += 1) {
+    if (serverExited()) throw new Error(`wrangler dev stopped before it was ready:\n${serverOutput}`)
     try {
       if ((await fetch(base)).ok) return
     } catch {
       // not listening yet
     }
-    await new Promise(resolve => setTimeout(resolve, 1000))
+    await new Promise(resolve => setTimeout(resolve, 500))
   }
-  throw new Error(`${base} did not start`)
+  throw new Error(`${base} did not start:\n${serverOutput}`)
 }
 
-let server
+async function stopServer() {
+  if (!server || serverExited()) return
+  const exited = new Promise(resolve => server.once('exit', resolve))
+  const signal = (name) => {
+    try {
+      process.kill(-server.pid, name)
+    } catch {
+      // already gone
+    }
+  }
+  signal('SIGTERM')
+  const forced = setTimeout(() => signal('SIGKILL'), 10_000)
+  await exited
+  clearTimeout(forced)
+}
+
 if (serve) {
-  server = spawn('npx', ['wrangler', 'dev', '--port', String(port), '--ip', '127.0.0.1'], { stdio: 'ignore', detached: true })
-  await waitUntilUp()
+  startServer()
+  for (const name of ['SIGINT', 'SIGTERM']) {
+    process.once(name, async () => {
+      await stopServer()
+      process.exit(1)
+    })
+  }
 }
 
 try {
+  if (serve) await waitUntilUp()
+
   // Prebuilt pages
   for (const path of ['/', '/services', '/services/development', '/products/flavorgpt', '/about-us', '/pricing', '/faq', '/glossary', '/careers', '/privacy-policy']) {
     const page = await get(path)
@@ -139,10 +198,11 @@ try {
   check('contact rejects an invalid email', badContact.status === 400, `status ${badContact.status}`)
   const noCheck = await post('/api/contact', { name: 'Smoke test', email: 'smoke@example.com', message: 'Hello' })
   check('contact refuses a message without the security check', [403, 503].includes(noCheck.status), `status ${noCheck.status}`)
+} catch (error) {
+  failed += 1
+  console.error(`\nStopped early: ${error.message}${error.cause ? ` (${error.cause.message})` : ''}`)
 } finally {
-  if (server) {
-    process.kill(-server.pid)
-  }
+  await stopServer()
 }
 
 console.log(failed ? `\n${failed} check${failed === 1 ? '' : 's'} failed for ${base}` : `\nAll checks passed for ${base}`)

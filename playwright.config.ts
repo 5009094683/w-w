@@ -38,7 +38,8 @@ export default defineConfig({
   webServer: {
     command: 'node --import ./tests/e2e/support/mock-gateways.mjs .output/server/index.mjs',
     url: E2E.baseURL,
-    reuseExistingServer: !process.env.CI,
+    // Never test a server that was already running: it may hold an older build.
+    reuseExistingServer: false,
     timeout: 60_000,
     env: {
       PORT: String(PORT),
