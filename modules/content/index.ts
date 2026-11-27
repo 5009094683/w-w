@@ -1,4 +1,4 @@
-import { writeFile } from 'node:fs/promises'
+import { readdir, stat, writeFile } from 'node:fs/promises'
 import { join, resolve } from 'node:path'
 import { addTemplate, addTypeTemplate, createResolver, defineNuxtModule, extendRouteRules, updateTemplates, useLogger } from '@nuxt/kit'
 import { IMAGE_BASE, writeImages } from './images'
@@ -8,6 +8,17 @@ import type { ContentData, RouteInfo } from './types'
 interface LlmsSection {
   title: string
   links: Array<{ title: string, href: string, description: string }>
+}
+
+/** Every file under a folder with its size and time of last change, as one string to compare. */
+async function snapshot(directory: string) {
+  const entries = await readdir(directory, { recursive: true, withFileTypes: true })
+  const files = await Promise.all(entries.filter(entry => entry.isFile()).map(async (entry) => {
+    const file = join(entry.parentPath, entry.name)
+    const info = await stat(file).catch(() => undefined)
+    return info ? `${file} ${info.size} ${info.mtimeMs}` : ''
+  }))
+  return files.sort().join('\n')
 }
 
 // Reads content/ once at build time, checks it against the schema and exposes
@@ -116,19 +127,35 @@ export default defineNuxtModule({
     }) as never)
 
     if (nuxt.options.dev) {
-      nuxt.hook('builder:watch', async (_event, path) => {
-        if (!resolve(rootDir, path).startsWith(contentDir)) {
+      // Nuxt does not watch content/, so this module does. A saved file is
+      // read again and the pages show it without the server restarting.
+      // It looks at the files a few times a second instead of asking the
+      // system for change events: those miss the second save of a file when
+      // an editor saves by replacing it.
+      let seen = await snapshot(contentDir)
+      let busy = false
+      const timer = setInterval(async () => {
+        if (busy) {
           return
         }
+        busy = true
         try {
-          ({ data, imageFiles } = await loadContentAndImages(rootDir))
-          await prepareImages()
-          await updateTemplates({ filter: template => template.filename.startsWith('content/') })
-          logger.success('Content reloaded')
+          const now = await snapshot(contentDir)
+          if (now !== seen) {
+            seen = now;
+            ({ data, imageFiles } = await loadContentAndImages(rootDir))
+            await prepareImages()
+            await updateTemplates({ filter: template => template.filename.startsWith('content/') })
+            logger.success('Content reloaded')
+          }
         } catch (error) {
           logger.error((error as Error).message)
+        } finally {
+          busy = false
         }
-      })
+      }, 400)
+      timer.unref()
+      nuxt.hook('close', () => clearInterval(timer))
     }
 
     logger.info(`${data.routes.length} pages from content/`)
