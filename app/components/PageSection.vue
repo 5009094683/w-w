@@ -15,9 +15,8 @@ defineProps<{
   <section :id="id" class="border-b border-rule">
     <div class="wrap grid gap-x-10 gap-y-6 py-12 md:py-16 lg:grid-cols-12">
       <header class="lg:col-span-3">
-        <p class="label flex items-baseline gap-3">
-          <span v-if="number" class="label-accent">{{ number }}</span>
-          <span>{{ label }}</span>
+        <p class="label">
+          <span v-if="number" class="label-accent mr-3">{{ number }}</span> {{ label }}
         </p>
       </header>
       <div class="lg:col-span-9">

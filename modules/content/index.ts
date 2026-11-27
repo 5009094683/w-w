@@ -1,7 +1,12 @@
 import { join, resolve } from 'node:path'
 import { addTemplate, addTypeTemplate, createResolver, defineNuxtModule, updateTemplates, useLogger } from '@nuxt/kit'
 import { loadContent } from './load'
-import type { ContentData } from './types'
+import type { ContentData, RouteInfo } from './types'
+
+interface LlmsSection {
+  title: string
+  links: Array<{ title: string, href: string, description: string }>
+}
 
 // Reads content/ once at build time, checks it against the schema and exposes
 // it to the app as typed modules: `import { services } from '#content/services'`.
@@ -41,6 +46,32 @@ export default defineNuxtModule({
         .map(key => `declare module '#content/${key}' {\n  export const ${key}: import('${types}').ContentData['${key}']\n}`)
         .join('\n\n') + '\n',
     }, { nitro: true, nuxt: true })
+
+    // llms.txt lists every page with its factual summary, grouped by section.
+    const siteUrl = String((nuxt.options as { site?: { url?: string } }).site?.url ?? '').replace(/\/+$/, '')
+    const sections: Array<{ title: string, section: RouteInfo['section'] }> = [
+      { title: 'Overview', section: 'home' },
+      { title: 'Products', section: 'products' },
+      { title: 'Services', section: 'services' },
+      { title: 'Company', section: 'company' },
+      { title: 'Careers', section: 'careers' },
+      { title: 'Legal', section: 'legal' },
+    ]
+    nuxt.hook('ai-ready:llms-txt' as never, ((payload: { sections: LlmsSection[] }) => {
+      for (const { title, section } of sections) {
+        payload.sections.push({
+          title,
+          links: data.routes
+            .filter(route => route.section === section)
+            .map(route => ({
+              // The generator escapes "&" as an HTML entity, which is wrong in a text file.
+              title: route.title.replace(/&/g, 'and'),
+              href: `${siteUrl}${route.path === '/' ? '/index' : route.path}.md`,
+              description: route.summary.replace(/\s+/g, ' '),
+            })),
+        })
+      }
+    }) as never)
 
     if (nuxt.options.dev) {
       nuxt.hook('builder:watch', async (_event, path) => {

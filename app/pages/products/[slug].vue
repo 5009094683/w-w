@@ -23,22 +23,22 @@ usePageSeo({
   faq: product.faq,
 })
 
-const img = useImage()
+const { absolute, organizationId } = useAbsoluteUrl()
 const cover = product.figures[0]
 
 useSchemaOrg([
   {
     '@type': 'SoftwareApplication',
-    '@id': `${product.path}#software`,
+    '@id': absolute(`${product.path}#software`),
     'name': product.name,
     'applicationCategory': 'BusinessApplication',
     'applicationSubCategory': product.category,
     'description': product.summary.text,
-    'url': product.path,
+    'url': absolute(product.path),
     ...(product.website ? { sameAs: product.website.href } : {}),
-    ...(cover ? { image: img(cover.src, { width: 1200, format: 'webp' }) } : {}),
+    ...(cover ? { image: absolute(cover.src) } : {}),
     ...(product.features.length ? { featureList: product.features.map(feature => feature.title) } : {}),
-    'publisher': { '@id': '/#identity' },
+    'publisher': { '@id': organizationId },
   },
 ])
 

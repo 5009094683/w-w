@@ -22,15 +22,17 @@ usePageSeo({
   faq: service.faq,
 })
 
+const { absolute, organizationId } = useAbsoluteUrl()
+
 useSchemaOrg([
   {
     '@type': 'Service',
-    '@id': `${service.path}#service`,
+    '@id': absolute(`${service.path}#service`),
     'name': service.name,
     'serviceType': service.name,
     'description': service.summary.text,
-    'url': service.path,
-    'provider': { '@id': '/#identity' },
+    'url': absolute(service.path),
+    'provider': { '@id': organizationId },
   },
 ])
 </script>

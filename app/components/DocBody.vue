@@ -13,9 +13,8 @@ const contents = computed(() => props.body.headings.filter(heading => heading.de
   <section class="border-b border-rule">
     <div class="wrap grid gap-x-10 gap-y-8 py-12 md:py-16 lg:grid-cols-12">
       <div class="lg:col-span-3">
-        <p class="label flex items-baseline gap-3">
-          <span v-if="number" class="label-accent">{{ number }}</span>
-          <span>{{ label }}</span>
+        <p class="label">
+          <span v-if="number" class="label-accent mr-3">{{ number }}</span> {{ label }}
         </p>
         <nav v-if="contents.length > 1" aria-label="On this page" class="mt-6 hidden lg:sticky lg:top-8 lg:block">
           <ol class="space-y-2 border-l border-rule pl-4 text-[0.9375rem]">

@@ -27,6 +27,8 @@ usePageSeo({
 // closing date and a place applicants may work from, so the structured data
 // is added only once the job file has all three.
 if (job.datePosted && job.validThrough && job.applicantCountries?.length) {
+  const { organizationId } = useAbsoluteUrl()
+
   useSchemaOrg([
     defineJobPosting({
       title: job.title,
@@ -36,7 +38,7 @@ if (job.datePosted && job.validThrough && job.applicantCountries?.length) {
       employmentType: job.employmentType.toLowerCase() === 'full-time' ? 'FULL_TIME' : job.employmentType.toLowerCase() === 'contract' ? 'CONTRACTOR' : 'INTERN',
       jobLocationType: 'TELECOMMUTE',
       applicantLocationRequirements: job.applicantCountries.map(name => ({ '@type': 'Country', name })),
-      hiringOrganization: { '@id': '/#identity' },
+      hiringOrganization: { '@id': organizationId },
     }),
   ])
 }

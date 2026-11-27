@@ -14,19 +14,23 @@ usePageSeo({
   crumbs,
 })
 
+const { absolute } = useAbsoluteUrl()
+const termSetId = absolute(`${glossary.path}#terms`)
+
 useSchemaOrg([
   {
     '@type': 'DefinedTermSet',
-    '@id': `${glossary.path}#terms`,
+    '@id': termSetId,
     'name': glossary.title,
     'description': glossary.lead.text,
-    'url': glossary.path,
+    'url': absolute(glossary.path),
     'hasDefinedTerm': glossary.terms.map(term => ({
       '@type': 'DefinedTerm',
-      '@id': `${glossary.path}#${term.id}`,
+      '@id': absolute(`${glossary.path}#${term.id}`),
       'name': term.term,
       'description': term.definition.text,
-      'url': `${glossary.path}#${term.id}`,
+      'url': absolute(`${glossary.path}#${term.id}`),
+      'inDefinedTermSet': termSetId,
       ...(term.aka.length ? { alternateName: term.aka } : {}),
     })),
   },
