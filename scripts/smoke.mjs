@@ -166,6 +166,29 @@ try {
     check(`${path} is served as ${type}`, file.status === 200 && file.headers.get('content-type')?.includes(type), `status ${file.status}, ${file.headers.get('content-type')}`)
   }
 
+  // Images: every file a page offers is served at the address written there
+  // (a redirect would cost a round trip per image), as the type its name
+  // says, and may be kept by browsers for good.
+  const product = await get('/products/flavorgpt')
+  const images = [...new Set(
+    [...product.body.matchAll(/\s(?:src|srcset)="([^"]+)"/g)]
+      .flatMap(([, value]) => value.replace(/&amp;/g, '&').split(',').map(item => item.trim().split(/\s+/)[0]))
+      .filter(address => /^\/[^/].*\.(avif|webp|png|jpg)$/.test(address)),
+  )]
+  const imageTypes = { avif: 'image/avif', webp: 'image/webp', png: 'image/png', jpg: 'image/jpeg' }
+  const imageProblems = { status: [], type: [], cache: [] }
+  for (const address of images) {
+    const response = await fetch(base + address, { redirect: 'manual' })
+    await response.arrayBuffer()
+    if (response.status !== 200) imageProblems.status.push(`${address} answered ${response.status}`)
+    if (response.headers.get('content-type') !== imageTypes[address.split('.').pop()]) imageProblems.type.push(`${address} is ${response.headers.get('content-type')}`)
+    if (!/max-age=31536000/.test(response.headers.get('cache-control') ?? '') || !/immutable/.test(response.headers.get('cache-control') ?? '')) imageProblems.cache.push(`${address} has ${response.headers.get('cache-control')}`)
+  }
+  check('/products/flavorgpt offers its images as AVIF, WebP and PNG', ['avif', 'webp', 'png'].every(extension => images.some(address => address.endsWith(`.${extension}`))), `${images.length} image addresses found`)
+  check(`all ${images.length} image files are served at the address in the page`, !imageProblems.status.length, imageProblems.status.slice(0, 3).join('; '))
+  check('each image is served as the type its name says', !imageProblems.type.length, imageProblems.type.slice(0, 3).join('; '))
+  check('each image may be kept by the browser for a year', !imageProblems.cache.length, imageProblems.cache.slice(0, 3).join('; '))
+
   const applePay = await fetch(`${base}/.well-known/apple-developer-merchantid-domain-association`)
   const bytes = Buffer.from(await applePay.arrayBuffer())
   check('the Apple Pay domain file is unchanged', applePay.status === 200 && createHash('sha256').update(bytes).digest('hex') === APPLE_PAY_SHA256)

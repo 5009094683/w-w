@@ -26,6 +26,15 @@ const SERVER_ROUTES = [/^\/payment(\/|$)/, /^\/api\//, /^\/pay$/]
 // The Apple Pay domain file must reach the browser byte for byte.
 const APPLE_PAY_FILE = '.well-known/apple-developer-merchantid-domain-association'
 const APPLE_PAY_SHA256 = 'd9a1dbf6d278f12d71f1967ecf0f8cf3fe042d82b5b47ef028542397ca447906'
+// Hosts choose the content type from the file name, so the name must tell the truth.
+const startsWith = (bytes, text, at = 0) => bytes.subarray(at, at + text.length).toString('latin1') === text
+const IMAGE_TYPES = {
+  avif: { type: 'image/avif', matches: bytes => startsWith(bytes, 'ftypavif', 4) },
+  webp: { type: 'image/webp', matches: bytes => startsWith(bytes, 'RIFF') && startsWith(bytes, 'WEBP', 8) },
+  png: { type: 'image/png', matches: bytes => startsWith(bytes, '\x89PNG\r\n\x1A\n') },
+  jpg: { type: 'image/jpeg', matches: bytes => startsWith(bytes, '\xFF\xD8\xFF') },
+}
+IMAGE_TYPES.jpeg = IMAGE_TYPES.jpg
 
 if (!existsSync(out)) {
   console.error('No build found. Run `npm run build:cloudflare` first.')
@@ -89,6 +98,7 @@ function resolvesToSomething(path) {
 }
 
 const ids = new Map(pages.map(page => [page.route, new Set([...page.html.matchAll(/\sid="([^"]+)"/g)].map(match => match[1]))]))
+const usedImages = new Set()
 
 for (const { route, html } of pages) {
   const expected = `${origin}${route}`
@@ -150,17 +160,27 @@ for (const { route, html } of pages) {
   }
 
   // Images
+  const candidates = srcset => (srcset ?? '').split(',').map(item => item.trim().split(/\s+/)[0]).filter(Boolean)
+  const checkImageFile = (address) => {
+    if (!address.startsWith('/')) return
+    usedImages.add(address)
+    if (!fileSet.has(address)) problem(route, `image file ${address} was not built`)
+    // Cloudflare redirects an address with "&" or a space to its escaped form: one wasted round trip per image.
+    if (!/^[\w./~-]+$/.test(address)) problem(route, `image address ${address} has characters that need escaping`)
+  }
   for (const [tag] of html.matchAll(/<img\b[^>]*>/g)) {
     const source = attribute(tag, 'src') ?? '(no src)'
     if (!attribute(tag, 'alt')) problem(route, `image ${source} has no description (alt)`)
     if (!attribute(tag, 'width') || !attribute(tag, 'height')) problem(route, `image ${source} has no width and height`)
-    for (const candidate of [source, ...(attribute(tag, 'srcset') ?? '').split(',').map(item => item.trim().split(/\s+/)[0])]) {
-      if (candidate?.startsWith('/') && !fileSet.has(candidate)) problem(route, `image file ${candidate} was not built`)
-    }
+    for (const candidate of [source, ...candidates(attribute(tag, 'srcset'))]) checkImageFile(candidate)
   }
   for (const [tag] of html.matchAll(/<source\b[^>]*>/g)) {
-    for (const candidate of (attribute(tag, 'srcset') ?? '').split(',').map(item => item.trim().split(/\s+/)[0])) {
-      if (candidate?.startsWith('/') && !fileSet.has(candidate)) problem(route, `image file ${candidate} was not built`)
+    const type = attribute(tag, 'type')
+    const srcset = attribute(tag, 'srcset')
+    if (/\s\d+w(,|$)/.test(srcset ?? '') && !attribute(tag, 'sizes')) problem(route, 'a <source> lists image widths but has no sizes, so browsers assume the full screen width')
+    for (const candidate of candidates(srcset)) {
+      checkImageFile(candidate)
+      if (IMAGE_TYPES[candidate.split('.').pop()]?.type !== type) problem(route, `image ${candidate} is offered as ${type ?? 'no type'}`)
     }
   }
 
@@ -197,6 +217,13 @@ for (const { route, html } of pages) {
   if (!new RegExp(`<link[^>]*rel="alternate"[^>]*type="text/markdown"[^>]*href="${markdown.replace(/[.]/g, '\\.')}"`).test(html)) {
     problem(route, 'does not link to its Markdown copy')
   }
+}
+
+// Image files
+for (const path of fileSet) {
+  const kind = IMAGE_TYPES[path.split('.').pop()]
+  if (kind && !kind.matches(readFileSync(join(out, path)))) problem(path, `would be served as ${kind.type} but holds something else`)
+  if (path.startsWith('/img/') && !usedImages.has(path)) notes.push(`${path}: no page uses this image file`)
 }
 
 // Sitemap
