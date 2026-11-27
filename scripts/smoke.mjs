@@ -192,6 +192,7 @@ try {
   const applePay = await fetch(`${base}/.well-known/apple-developer-merchantid-domain-association`)
   const bytes = Buffer.from(await applePay.arrayBuffer())
   check('the Apple Pay domain file is unchanged', applePay.status === 200 && createHash('sha256').update(bytes).digest('hex') === APPLE_PAY_SHA256)
+  check('the Apple Pay domain file is served as application/octet-stream, as before', applePay.headers.get('content-type') === 'application/octet-stream', String(applePay.headers.get('content-type')))
 
   // Payment pages: rendered on request, with scripts, out of search
   for (const path of ['/payment', '/payment/100INR', '/payment/gateway-selection?amount=100&currency=INR', '/payment/success']) {

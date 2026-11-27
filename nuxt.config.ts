@@ -113,6 +113,10 @@ export default defineNuxtConfig({
     '/contact-us': { noScripts: false, prerender: true },
     '/api/**': { headers: { 'X-Robots-Tag': 'noindex' } },
 
+    // The Apple Pay domain file has no extension, so Cloudflare would send it
+    // with no content type at all. This is the type the site has always sent.
+    '/.well-known/apple-developer-merchantid-domain-association': { headers: { 'Content-Type': 'application/octet-stream' } },
+
     // Payment pages are rendered on request, need scripts and stay out of search.
     '/payment': { noScripts: false, prerender: false, robots: false },
     '/payment/**': { noScripts: false, prerender: false, robots: false },
