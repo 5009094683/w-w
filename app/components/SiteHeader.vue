@@ -1,5 +1,10 @@
 <script setup lang="ts">
 import { site } from '#content/site'
+
+const route = useRoute()
+
+// A menu item is current on its own page and on every page beneath it.
+const isCurrent = (href: string) => route.path === href || route.path.startsWith(`${href}/`)
 </script>
 
 <template>
@@ -15,6 +20,7 @@ import { site } from '#content/site'
           :key="item.href"
           :to="item.href"
           class="nav-link px-3 py-2 text-[0.9375rem] font-medium text-soft transition-colors hover:text-ink"
+          :class="{ 'is-current': isCurrent(item.href) }"
         >
           {{ item.label }}
         </NuxtLink>
@@ -39,6 +45,7 @@ import { site } from '#content/site'
             :key="item.href"
             :to="item.href"
             class="nav-link flex min-h-11 items-center border-b border-rule px-3 font-medium"
+            :class="{ 'is-current': isCurrent(item.href) }"
           >
             {{ item.label }}
           </NuxtLink>
@@ -53,7 +60,7 @@ import { site } from '#content/site'
 </template>
 
 <style scoped>
-.nav-link.router-link-active {
+.nav-link.is-current {
   color: var(--ink);
   text-decoration: underline;
   text-decoration-color: var(--accent);

@@ -14,12 +14,12 @@ defineProps<{
 <template>
   <section :id="id" class="border-b border-rule">
     <div class="wrap grid gap-x-10 gap-y-6 py-12 md:py-16 lg:grid-cols-12">
-      <header class="lg:col-span-3">
+      <header class="min-w-0 lg:col-span-3">
         <p class="label">
           <span v-if="number" class="label-accent mr-3">{{ number }}</span> {{ label }}
         </p>
       </header>
-      <div class="lg:col-span-9">
+      <div class="min-w-0 lg:col-span-9">
         <h2 v-if="title" class="max-w-[36rem] text-[clamp(1.6rem,2.4vw,2.25rem)]">
           {{ title }}
         </h2>

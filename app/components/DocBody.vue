@@ -12,7 +12,7 @@ const contents = computed(() => props.body.headings.filter(heading => heading.de
 <template>
   <section class="border-b border-rule">
     <div class="wrap grid gap-x-10 gap-y-8 py-12 md:py-16 lg:grid-cols-12">
-      <div class="lg:col-span-3">
+      <div class="min-w-0 lg:col-span-3">
         <p class="label">
           <span v-if="number" class="label-accent mr-3">{{ number }}</span> {{ label }}
         </p>
@@ -24,7 +24,7 @@ const contents = computed(() => props.body.headings.filter(heading => heading.de
           </ol>
         </nav>
       </div>
-      <div class="prose lg:col-span-9" v-html="body.html" />
+      <div class="prose min-w-0 lg:col-span-9" v-html="body.html" />
     </div>
   </section>
 </template>

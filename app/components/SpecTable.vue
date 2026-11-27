@@ -20,7 +20,7 @@ defineProps<{
         <dt class="label pt-[0.2rem]">
           {{ fact.label }}
         </dt>
-        <dd class="rich text-[0.9375rem] leading-normal" v-html="fact.value.html" />
+        <dd class="rich min-w-0 break-words text-[0.9375rem] leading-normal" v-html="fact.value.html" />
       </div>
     </dl>
   </div>

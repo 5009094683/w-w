@@ -18,7 +18,7 @@ defineProps<{
 <template>
   <section class="border-b border-rule">
     <div class="wrap grid gap-x-10 gap-y-10 pb-12 pt-8 md:pb-16 md:pt-10 lg:grid-cols-12">
-      <div :class="$slots.aside ? 'lg:col-span-7' : 'lg:col-span-9'">
+      <div class="min-w-0" :class="$slots.aside ? 'lg:col-span-7' : 'lg:col-span-9'">
         <nav v-if="crumbs?.length" aria-label="Breadcrumb" class="label mb-8">
           <ol class="flex flex-wrap items-center gap-x-2 gap-y-1">
             <li v-for="crumb in crumbs" :key="crumb.to" class="flex items-center gap-2">
@@ -48,7 +48,7 @@ defineProps<{
         </p>
       </div>
 
-      <aside v-if="$slots.aside" class="lg:col-span-5 lg:pl-4">
+      <aside v-if="$slots.aside" class="min-w-0 lg:col-span-5 lg:pl-4">
         <slot name="aside" />
       </aside>
     </div>
