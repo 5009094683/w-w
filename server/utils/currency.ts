@@ -77,18 +77,19 @@ export function toMinorUnits(amount: unknown, currency: unknown): number {
     )
   }
 
-  const minor = BigInt(whole) * (10n ** BigInt(exponent))
-    + BigInt(fraction.padEnd(exponent, '0') || '0')
-
-  if (minor <= 0n) {
-    throw new InvalidAmountError('Amount must be greater than zero')
-  }
-
-  if (minor > BigInt(Number.MAX_SAFE_INTEGER)) {
+  // With at most 12 whole digits the result is far below 2^53, so the integer
+  // arithmetic below is exact.
+  if (whole.replace(/^0+/, '').length > 12) {
     throw new InvalidAmountError('Amount is too large')
   }
 
-  return Number(minor)
+  const minor = Number(whole) * (10 ** exponent) + Number(fraction.padEnd(exponent, '0') || '0')
+
+  if (minor <= 0) {
+    throw new InvalidAmountError('Amount must be greater than zero')
+  }
+
+  return minor
 }
 
 export function fromMinorUnits(minorAmount: number, currency: unknown): number {

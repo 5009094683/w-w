@@ -47,11 +47,18 @@ describe('toMinorUnits', () => {
     expect(toMinorUnits(' 12.34 ', ' usd ')).toBe(1234)
   })
 
+  it('stays exact for the largest amounts it accepts', () => {
+    expect(toMinorUnits('999999999999.99', 'INR')).toBe(99999999999999)
+    expect(toMinorUnits('999999999999.99', 'KWD')).toBe(999999999999990)
+    expect(toMinorUnits('000000000000100', 'INR')).toBe(10000)
+  })
+
   it('rejects amounts that are not positive numbers', () => {
     for (const bad of [0, -5, Number.NaN, Number.POSITIVE_INFINITY, '', 'abc', '1e3', '10,50', null, undefined, {}, [100], true]) {
       expect(() => toMinorUnits(bad, 'INR'), String(bad)).toThrow(InvalidAmountError)
     }
     expect(() => toMinorUnits(1e21, 'INR')).toThrow(InvalidAmountError)
+    expect(() => toMinorUnits('1000000000000', 'INR')).toThrow('Amount is too large')
     expect(() => toMinorUnits('99999999999999999999', 'INR')).toThrow('Amount is too large')
   })
 
