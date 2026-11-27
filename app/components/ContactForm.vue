@@ -102,10 +102,13 @@ async function submit() {
       <TurnstileWidget v-else-if="checkRequired && started" ref="widget" :site-key="siteKey" @token="token = $event" />
       <div v-else-if="checkRequired" class="min-h-[65px]" />
 
-      <p v-if="status === 'error'" role="alert" class="border-l-2 border-accent pl-4 text-accent-ink">
-        {{ errorMessage }} You can also email
-        <a class="underline" :href="`mailto:${site.contact.email}`">{{ site.contact.email }}</a>.
-      </p>
+      <div v-if="status === 'error'" role="alert" class="border-l-2 border-accent pl-4 text-accent-ink">
+        <p>{{ errorMessage }}</p>
+        <p class="mt-1">
+          Our email address is
+          <a class="underline" :href="`mailto:${site.contact.email}`">{{ site.contact.email }}</a>.
+        </p>
+      </div>
 
       <button type="submit" class="btn btn-primary" :disabled="!canSubmit || unavailable">
         {{ status === 'sending' ? 'Sending…' : 'Send message' }}
