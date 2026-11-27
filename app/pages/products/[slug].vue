@@ -37,6 +37,18 @@ useSchemaOrg([
     'url': absolute(product.path),
     ...(product.website ? { sameAs: product.website.href } : {}),
     ...(cover ? { image: absolute(cover.src) } : {}),
+    ...(product.figures.length
+      ? {
+          screenshot: product.figures.map(figure => ({
+            '@type': 'ImageObject',
+            'url': absolute(figure.src),
+            'contentUrl': absolute(figure.src),
+            'caption': figure.caption ?? figure.alt,
+            'width': figure.width,
+            'height': figure.height,
+          })),
+        }
+      : {}),
     ...(product.features.length ? { featureList: product.features.map(feature => feature.title) } : {}),
     'publisher': { '@id': organizationId },
   },
