@@ -1,6 +1,7 @@
 import { join, resolve } from 'node:path'
-import { addTemplate, addTypeTemplate, createResolver, defineNuxtModule, updateTemplates, useLogger } from '@nuxt/kit'
-import { loadContent } from './load'
+import { addTemplate, addTypeTemplate, createResolver, defineNuxtModule, extendRouteRules, updateTemplates, useLogger } from '@nuxt/kit'
+import { IMAGE_BASE, writeImages } from './images'
+import { loadContentAndImages } from './load'
 import type { ContentData, RouteInfo } from './types'
 
 interface LlmsSection {
@@ -11,6 +12,8 @@ interface LlmsSection {
 // Reads content/ once at build time, checks it against the schema and exposes
 // it to the app as typed modules: `import { services } from '#content/services'`.
 // There is no database and no request to a CMS when a page is viewed.
+// The pictures under content/images/ are resized and converted in the same
+// step (see images.ts) and served as plain files.
 export default defineNuxtModule({
   meta: { name: 'ybx-content' },
 
@@ -20,9 +23,29 @@ export default defineNuxtModule({
     const rootDir = nuxt.options.rootDir
     const contentDir = resolve(rootDir, 'content')
     const outDir = join(nuxt.options.buildDir, 'content')
+    const imageDir = join(nuxt.options.buildDir, 'content-images')
+    const imageCache = join(rootDir, 'node_modules/.cache/content-images')
 
-    let data = await loadContent(rootDir)
+    let { data, imageFiles } = await loadContentAndImages(rootDir)
     const keys = Object.keys(data) as Array<keyof ContentData>
+
+    // `nuxt prepare` only writes types, so it leaves the pictures alone.
+    const prepareImages = async () => {
+      if (nuxt.options._prepare) {
+        return
+      }
+      const started = Date.now()
+      const encoded = await writeImages(imageFiles, imageDir, imageCache)
+      if (encoded) {
+        logger.info(`Prepared ${encoded} new picture files in ${((Date.now() - started) / 1000).toFixed(1)}s`)
+      }
+    }
+    // Done when the build starts, not here: `nuxt build` empties the build
+    // folder after the modules are set up.
+    nuxt.hook('build:before', prepareImages)
+
+    // A changed picture gets a new address, so each file can be kept forever.
+    extendRouteRules(`${IMAGE_BASE}/**`, { headers: { 'Cache-Control': 'public, max-age=31536000, immutable' } })
 
     for (const key of keys) {
       addTemplate({
@@ -35,6 +58,7 @@ export default defineNuxtModule({
     nuxt.options.alias['#content'] = outDir
     nuxt.hook('nitro:config', (config) => {
       config.alias = { ...config.alias, '#content': outDir }
+      config.publicAssets = [...(config.publicAssets ?? []), { dir: imageDir, baseURL: IMAGE_BASE, maxAge: 60 * 60 * 24 * 365 }]
       config.prerender ??= {}
       config.prerender.routes = [...new Set([...(config.prerender.routes ?? []), ...data.routes.map(route => route.path)])]
     })
@@ -79,7 +103,8 @@ export default defineNuxtModule({
           return
         }
         try {
-          data = await loadContent(rootDir)
+          ({ data, imageFiles } = await loadContentAndImages(rootDir))
+          await prepareImages()
           await updateTemplates({ filter: template => template.filename.startsWith('content/') })
           logger.success('Content reloaded')
         } catch (error) {

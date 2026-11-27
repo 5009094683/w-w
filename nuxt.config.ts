@@ -34,7 +34,7 @@ const redirect = (to: string, statusCode: 301 | 302) => ({ redirect: { to, statu
 export default defineNuxtConfig({
   compatibilityDate: '2026-11-26',
 
-  modules: ['@nuxtjs/seo', '@nuxt/image', '@nuxt/fonts', '@nuxt/eslint'],
+  modules: ['@nuxtjs/seo', '@nuxt/fonts', '@nuxt/eslint'],
 
   devtools: { enabled: false },
 
@@ -113,11 +113,6 @@ export default defineNuxtConfig({
     '/contact-us': { noScripts: false, prerender: true },
     '/api/**': { headers: { 'X-Robots-Tag': 'noindex' } },
 
-    // Image files keep their address when replaced, so they are cached for a
-    // month, not forever. Rename an image to show a new version at once.
-    '/_ipx/**': { headers: { 'Cache-Control': 'public, max-age=2592000, stale-while-revalidate=604800' } },
-    '/images/**': { headers: { 'Cache-Control': 'public, max-age=2592000, stale-while-revalidate=604800' } },
-
     // Payment pages are rendered on request, need scripts and stay out of search.
     '/payment': { noScripts: false, prerender: false, robots: false },
     '/payment/**': { noScripts: false, prerender: false, robots: false },
@@ -178,16 +173,6 @@ export default defineNuxtConfig({
         'Prices on /pricing are averages. The governing texts for billing and refunds are /refund-policy and /terms-conditions.',
       ].join('\n'),
     },
-  },
-
-  image: {
-    // Every size and format is generated at build time and served as a file.
-    provider: 'ipxStatic',
-    format: ['avif', 'webp'],
-  },
-
-  $development: {
-    image: { provider: 'ipx' },
   },
 
   fonts: {

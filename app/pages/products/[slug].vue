@@ -91,7 +91,7 @@ const numbers = {
           :key="item.figure.src"
           :image="item.figure"
           :number="item.number"
-          sizes="xs:100vw sm:100vw md:100vw lg:880px"
+          :sizes="FIGURE_SIZES.full"
         />
         <div v-if="tall.length" class="grid grid-cols-2 gap-x-5 gap-y-8 md:grid-cols-3">
           <FigureFrame
@@ -99,7 +99,7 @@ const numbers = {
             :key="item.figure.src"
             :image="item.figure"
             :number="item.number"
-            sizes="xs:50vw sm:50vw md:33vw lg:290px"
+            :sizes="FIGURE_SIZES.grid"
           />
         </div>
         <FigureFrame
@@ -107,7 +107,7 @@ const numbers = {
           :key="item.figure.src"
           :image="item.figure"
           :number="item.number"
-          sizes="xs:100vw sm:100vw md:100vw lg:880px"
+          :sizes="FIGURE_SIZES.full"
         />
       </div>
     </PageSection>

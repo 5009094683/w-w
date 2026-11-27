@@ -63,31 +63,31 @@ features:
   - title: Privacy by default
     text: Ensure maximum security with strictly anonymous usage options and zero-retention policies for your sensitive inputs.
 figures:
-  - src: /images/products/flavorgpt/chat.png
+  - src: products/flavorgpt/chat.png
     alt: FlavorGPT start screen with a chat history sidebar on the left and a prompt box in the center that has a reasoning mode and a model picker.
     caption: The chat workspace. The prompt box has a model picker and a reasoning mode.
-  - src: /images/products/flavorgpt/mcp-server-tool.png
+  - src: products/flavorgpt/mcp-server-tool.png
     alt: FlavorGPT Create Tool panel with the MCP Server tab selected, showing quick setup and a catalog of MCP templates that includes GitHub and Notion.
     caption: Adding an MCP server from the built-in catalog.
-  - src: /images/products/flavorgpt/openapi-tool.png
+  - src: products/flavorgpt/openapi-tool.png
     alt: FlavorGPT Create Tool panel with the OpenAPI Tool tab selected, with fields for a base URL, custom headers and a schema.
     caption: Adding a tool from an OpenAPI schema.
-  - src: /images/products/flavorgpt/assistant.png
+  - src: products/flavorgpt/assistant.png
     alt: FlavorGPT Create Assistant panel with fields for name, description, model, prompt, files and knowledge bases, conversation starters and public or private permissions.
     caption: Creating an assistant with its own model, prompt and knowledge.
-  - src: /images/products/flavorgpt/knowledge-base.png
+  - src: products/flavorgpt/knowledge-base.png
     alt: FlavorGPT Create Knowledge base panel with options to select indexed files, upload new files, add URL sources and add notes.
     caption: Building a knowledge base from files, URLs and notes.
-  - src: /images/products/flavorgpt/custom-model.png
+  - src: products/flavorgpt/custom-model.png
     alt: FlavorGPT Create Model panel for adding a custom model through an OpenAI SDK-compatible endpoint, with fields for model ID, endpoint URL, API key and API type.
     caption: Connecting a custom model through an OpenAI SDK-compatible endpoint.
-  - src: /images/products/flavorgpt/chat-settings.png
+  - src: products/flavorgpt/chat-settings.png
     alt: FlavorGPT Chat Settings panel on the Message tab, with options for message style, group style, navigation bar and message font size.
     caption: Chat settings for each user.
-  - src: /images/products/flavorgpt/admin-models.png
+  - src: products/flavorgpt/admin-models.png
     alt: FlavorGPT admin console Models page, listing models by provider with status, tier and limits, below a Tool Workflow Safety section with limits for rounds, tool calls and execution time.
     caption: The admin console, with models, providers and safety limits for tool workflows.
-  - src: /images/products/flavorgpt/white-label.png
+  - src: products/flavorgpt/white-label.png
     alt: FlavorGPT admin console Customize White Label page with fields for brand name, company name, website URL and product description, a login redirect setting and logo uploads.
     caption: White-label settings for brand identity, redirects and brand assets.
 faq:

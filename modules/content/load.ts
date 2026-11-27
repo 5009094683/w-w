@@ -1,8 +1,8 @@
 import { readdir, readFile } from 'node:fs/promises'
 import { join, relative } from 'node:path'
-import sharp from 'sharp'
 import { parse as parseYaml } from 'yaml'
 import type { z } from 'zod'
+import { type ImageFile, planImage } from './images'
 import { renderInline, renderMarkdown } from './markdown'
 import * as schema from './schema'
 import type * as T from './types'
@@ -28,6 +28,8 @@ class Loader {
   readonly issues: string[] = []
   /** Every internal link found, with the file it came from, checked once all routes are known. */
   readonly links: Array<{ file: string, href: string }> = []
+  /** Every picture file the pages refer to, for the build to create. */
+  readonly imageFiles: ImageFile[] = []
 
   constructor(readonly rootDir: string) {}
 
@@ -118,6 +120,9 @@ class Loader {
     if (rendered.headings.some(heading => heading.depth === 1)) {
       this.issues.push(`${this.name(file)}: the text must not contain a top-level "# " heading; the page heading comes from the fields above it`)
     }
+    if (/<img\b/u.test(rendered.html)) {
+      this.issues.push(`${this.name(file)}: the text contains a picture, which would be published unresized; pictures go in the \`figures\` list of a product page`)
+    }
     return rendered
   }
 
@@ -144,11 +149,13 @@ class Loader {
 
   async image(file: string, input: { src: string, alt: string, caption?: string }): Promise<T.ContentImage> {
     try {
-      const { width, height } = await sharp(join(this.rootDir, 'public', input.src)).metadata()
-      return { ...input, width: width!, height: height! }
-    } catch {
-      this.issues.push(`${this.name(file)}: image ${input.src} was not found under public/`)
-      return { ...input, width: 0, height: 0 }
+      const { files, ...prepared } = await planImage(join(this.contentDir, 'images'), input.src)
+      this.imageFiles.push(...files)
+      return { ...input, ...prepared }
+    } catch (error) {
+      const reason = (error as NodeJS.ErrnoException).code === 'ENOENT' ? 'was not found' : (error as Error).message
+      this.issues.push(`${this.name(file)}: image content/images/${input.src} ${reason}`)
+      return { ...input, width: 0, height: 0, sources: [] }
     }
   }
 
@@ -157,7 +164,7 @@ class Loader {
 
     for (const { file, href } of this.links) {
       const path = href.split(/[?#]/u)[0]!
-      if (!known.has(path) && !path.startsWith('/payment/') && !path.startsWith('/images/')) {
+      if (!known.has(path) && !path.startsWith('/payment/')) {
         this.issues.push(`${this.name(file)}: link to ${href} does not match any page`)
       }
     }
@@ -178,6 +185,11 @@ function byOrder<Item extends { order: number }>(items: Item[]) {
 }
 
 export async function loadContent(rootDir: string): Promise<T.ContentData> {
+  return (await loadContentAndImages(rootDir)).data
+}
+
+/** The content, plus the list of picture files its pages refer to. */
+export async function loadContentAndImages(rootDir: string): Promise<{ data: T.ContentData, imageFiles: ImageFile[] }> {
   const loader = new Loader(rootDir)
   const pages = join(loader.contentDir, 'pages')
 
@@ -442,5 +454,5 @@ export async function loadContent(rootDir: string): Promise<T.ContentData> {
     throw new ContentError(loader.issues)
   }
 
-  return data
+  return { data, imageFiles: loader.imageFiles }
 }

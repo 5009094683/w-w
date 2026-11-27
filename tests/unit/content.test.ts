@@ -45,15 +45,23 @@ describe('content schema', () => {
       ...service,
       code: 'P-01',
       category: 'AI workspace',
-      figures: [{ src: '/images/products/flavorgpt/chat.png' }],
+      figures: [{ src: 'products/flavorgpt/chat.png' }],
     }
 
     expect(issues(productSchema.safeParse(product))).toContain('figures.0.alt')
-    expect(productSchema.safeParse({ ...product, figures: [{ src: '/images/products/flavorgpt/chat.png', alt: 'The FlavorGPT chat workspace.' }] }).success).toBe(true)
+    expect(productSchema.safeParse({ ...product, figures: [{ src: 'products/flavorgpt/chat.png', alt: 'The FlavorGPT chat workspace.' }] }).success).toBe(true)
   })
 
-  it('fails on an image outside public/images', () => {
-    const product = { ...service, code: 'P-01', category: 'AI workspace', figures: [{ src: 'https://example.com/a.png', alt: 'An image from another site.' }] }
+  it.each([
+    'https://example.com/a.png',
+    '/images/products/flavorgpt/chat.png',
+    '../../secrets/key.png',
+    'products/flavorgpt/chat&settings.png',
+    'products/flavorgpt/chat settings.png',
+    'products/flavorgpt/chat.v2.png',
+    'products/flavorgpt/chat.gif',
+  ])('fails on the image path %s', (src) => {
+    const product = { ...service, code: 'P-01', category: 'AI workspace', figures: [{ src, alt: 'A picture that should be refused.' }] }
 
     expect(issues(productSchema.safeParse(product))).toContain('figures.0.src')
   })
@@ -145,6 +153,8 @@ describe('the content in this repository', () => {
       expect(figure.width, figure.src).toBeGreaterThan(0)
       expect(figure.height, figure.src).toBeGreaterThan(0)
       expect(figure.alt.length, figure.src).toBeGreaterThanOrEqual(10)
+      expect(figure.src, figure.src).toMatch(/^\/img\/[\w/-]+-\d+\.[a-f0-9]{10}\.png$/)
+      expect(figure.sources.map(source => source.type), figure.src).toEqual(['image/avif', 'image/webp'])
     }
   })
 

@@ -100,7 +100,7 @@ const questions = faq.groups.flatMap(group => group.items).filter(item => item.h
         v-if="flavorgpt?.figures[0]"
         :image="flavorgpt.figures[0]"
         :number="1"
-        sizes="xs:100vw sm:100vw md:100vw lg:880px"
+        :sizes="FIGURE_SIZES.full"
         class="mb-10"
       />
       <FeatureGrid :items="home.highlights.items" />

@@ -26,7 +26,8 @@ const page = {
 }
 
 const image = z.strictObject({
-  src: z.string().regex(/^\/images\/[\w./-]+\.(?:png|jpe?g|webp)$/u, 'Use a file under public/images/'),
+  /** A PNG or JPEG under content/images/. Letters, digits, hyphens and underscores only, so the address needs no escaping. */
+  src: z.string().regex(/^(?:[\w-]+\/)*[\w-]+\.(?:png|jpe?g)$/u, 'Use the path of a PNG or JPEG under content/images/, for example products/flavorgpt/chat.png'),
   alt: text(10),
   caption: text().optional(),
 })

@@ -44,11 +44,15 @@ export interface Feature {
 }
 
 export interface ContentImage {
+  /** The picture in its own format (PNG or JPEG), for anything that reads neither AVIF nor WebP. */
   src: string
   alt: string
   caption?: string
+  /** Size of the `src` file in pixels. */
   width: number
   height: number
+  /** The same picture as AVIF and WebP, each at several widths, ready for <source srcset>. */
+  sources: Array<{ type: string, srcset: string }>
 }
 
 export interface Body {
