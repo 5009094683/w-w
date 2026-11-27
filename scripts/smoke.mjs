@@ -38,6 +38,12 @@ if (!base) {
   process.exit(1)
 }
 
+// Scripts Cloudflare adds to pages when the domain's owner turns them on in the
+// dashboard: the Web Analytics beacon and bot checks. They are reported below,
+// and left out when checking that the site itself ships no scripts.
+const CLOUDFLARE_ADDED = /<script\b[^>]*(?:static\.cloudflareinsights\.com|\/cdn-cgi\/challenge-platform\/)[^>]*>(?:<\/script>)?/g
+const ownMarkup = body => body.replace(CLOUDFLARE_ADDED, '')
+
 let failed = 0
 function check(name, ok, detail = '') {
   if (!ok) failed += 1
@@ -131,7 +137,7 @@ try {
   for (const path of ['/', '/services', '/services/development', '/products/flavorgpt', '/about-us', '/pricing', '/faq', '/glossary', '/careers', '/privacy-policy']) {
     const page = await get(path)
     check(`${path} is served`, page.status === 200 && page.headers.get('content-type')?.includes('text/html'), `status ${page.status}`)
-    check(`${path} ships no scripts`, !/<script(?![^>]*type="(speculationrules|application\/ld\+json)")/.test(page.body))
+    check(`${path} ships no scripts`, !/<script(?![^>]*type="(speculationrules|application\/ld\+json)")/.test(ownMarkup(page.body)))
   }
   const contact = await get('/contact-us')
   check('/contact-us is served with its scripts', contact.status === 200 && /<script type="module"/.test(contact.body), `status ${contact.status}`)
@@ -141,13 +147,25 @@ try {
     check(`/ sends ${name}`, home.headers.get(name) === expected, String(home.headers.get(name)))
   }
 
+  // Cloudflare can rewrite pages on their way out. These features are set on
+  // the domain in the Cloudflare dashboard, not in this project, and they are
+  // off on a workers.dev address, so these checks matter on the real domain.
+  const served = [home.body, contact.body]
+  check('the contact email is readable in the page', /href="mailto:[^"@\s]+@[^"\s]+"/.test(contact.body))
+  check('Cloudflare is not hiding email addresses (Email Address Obfuscation is off)', !served.some(body => /__cf_email__|\/cdn-cgi\/l\/email-protection/.test(body)))
+  check('Cloudflare is not rewriting scripts (Rocket Loader is off)', !served.some(body => /rocket-loader/i.test(body)))
+  const added = new Set(served.flatMap(body => body.match(CLOUDFLARE_ADDED) ?? []).map(tag => tag.includes('cloudflareinsights') ? 'Web Analytics' : 'bot checks'))
+  if (added.size) {
+    console.log(`note  Cloudflare adds a script to every page for ${[...added].join(' and ')}. That is a setting on the domain; with it on, pages are no longer script-free.`)
+  }
+
   // Addresses: no trailing slash, real 404s, redirects for moved pages
   const slash = await get('/about-us/')
   check('/about-us/ redirects to /about-us', [301, 307, 308].includes(slash.status) && slash.headers.get('location')?.replace(base, '') === '/about-us', `status ${slash.status} to ${slash.headers.get('location')}`)
 
   const missing = await get('/this-page-does-not-exist')
   check('an unknown address returns 404', missing.status === 404, `status ${missing.status}`)
-  check('the 404 page is the designed one and ships no scripts', missing.body.includes('This page does not exist.') && !/<script type="module"/.test(missing.body))
+  check('the 404 page is the designed one and ships no scripts', missing.body.includes('This page does not exist.') && !/<script type="module"/.test(ownMarkup(missing.body)))
   check('an unknown address under a section returns 404', (await get('/services/not-a-service')).status === 404)
 
   for (const [from, to, status] of [

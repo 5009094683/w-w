@@ -104,6 +104,8 @@ for (const { route, html } of pages) {
   const expected = `${origin}${route}`
 
   if (!/<html[^>]*\slang="en"/.test(html)) problem(route, 'the <html> tag has no lang="en"')
+  // Cloudflare sends prebuilt pages as "text/html" without a charset, so the page has to state it, early.
+  if (!/<meta charset="utf-8">/i.test(html.slice(0, 1024))) problem(route, 'does not declare <meta charset="utf-8"> in its first 1024 bytes')
 
   const title = decode(/<title>([^<]*)<\/title>/.exec(html)?.[1] ?? '')
   if (!title) problem(route, 'no <title>')
