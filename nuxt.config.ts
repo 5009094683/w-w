@@ -167,6 +167,9 @@ export default defineNuxtConfig({
   aiReady: {
     database: false,
     zeroRuntimeMarkdown: true,
+    // Every file is written at build time. With the default of ten minutes,
+    // /sitemap.md was taken from the previous build's cache: one build behind.
+    llmsTxtCacheSeconds: 0,
     contentSignal: {
       search: true,
       aiInput: true,

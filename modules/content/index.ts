@@ -1,4 +1,4 @@
-import { readdir, stat, writeFile } from 'node:fs/promises'
+import { readdir, readFile, stat, writeFile } from 'node:fs/promises'
 import { join, resolve } from 'node:path'
 import { addTemplate, addTypeTemplate, createResolver, defineNuxtModule, extendRouteRules, updateTemplates, useLogger } from '@nuxt/kit'
 import { IMAGE_BASE, writeImages } from './images'
@@ -75,10 +75,22 @@ export default defineNuxtModule({
       config.prerender.routes = [...new Set([...(config.prerender.routes ?? []), ...data.routes.map(route => route.path)])]
     })
 
-    // Cloudflare answers /about-us/ with a temporary redirect to /about-us.
-    // A _redirects file makes that permanent, and lets Cloudflare answer the
-    // site's other redirects itself, without starting the Worker.
     nuxt.hook('nitro:init', (nitro) => {
+      // The generator writes "&" as "&amp;" in the page titles of these two
+      // text files. They are read as text, by people and by AI crawlers.
+      nitro.hooks.hook('compiled', async () => {
+        for (const name of ['llms-full.txt', 'sitemap.md']) {
+          const file = join(nitro.options.output.publicDir, name)
+          const text = await readFile(file, 'utf8').catch(() => undefined)
+          if (text?.includes('&amp;')) {
+            await writeFile(file, text.replaceAll('&amp;', '&'))
+          }
+        }
+      })
+
+      // Cloudflare answers /about-us/ with a temporary redirect to /about-us.
+      // A _redirects file makes that permanent, and lets Cloudflare answer the
+      // site's other redirects itself, without starting the Worker.
       nitro.hooks.hook('compiled', async () => {
         if (!nitro.options.preset.startsWith('cloudflare')) {
           return
