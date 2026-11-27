@@ -55,7 +55,12 @@ function walk(directory) {
 const files = walk(out)
 const fileSet = new Set(files.map(file => `/${relative(out, file)}`))
 const read = path => readFileSync(join(out, path), 'utf8')
-const decode = value => value.replace(/&amp;/g, '&').replace(/&quot;/g, '"').replace(/&#39;/g, '\'').replace(/&lt;/g, '<').replace(/&gt;/g, '>')
+const NAMED_ENTITIES = { amp: '&', quot: '"', apos: '\'', lt: '<', gt: '>', nbsp: ' ' }
+const decode = value => value.replace(/&(?:#x([0-9a-f]+)|#(\d+)|([a-z]+));/gi, (entity, hex, number, name) => {
+  if (hex) return String.fromCodePoint(Number.parseInt(hex, 16))
+  if (number) return String.fromCodePoint(Number(number))
+  return NAMED_ENTITIES[name.toLowerCase()] ?? entity
+})
 const attribute = (tag, name) => {
   const match = new RegExp(`\\s${name}="([^"]*)"`, 'i').exec(tag)
   return match ? decode(match[1]) : undefined
@@ -219,6 +224,54 @@ for (const { route, html } of pages) {
   if (!new RegExp(`<link[^>]*rel="alternate"[^>]*type="text/markdown"[^>]*href="${markdown.replace(/[.]/g, '\\.')}"`).test(html)) {
     problem(route, 'does not link to its Markdown copy')
   }
+}
+
+// Markdown copies: what AI crawlers read. Each must carry the text of its page,
+// as clean Markdown.
+const withoutCode = text => text.replace(/```[\s\S]*?```/g, '').replace(/`[^`\n]*`/g, '')
+const plain = text => decode(text)
+  .replace(/\]\([^)\s]*\)/g, ' ')
+  .replace(/https?:\/\/[^\s)]+/g, ' ')
+  .replace(/[*_`>#[\]()|\\]/g, ' ')
+  .replace(/\s+/g, '')
+  .toLowerCase()
+
+function checkMarkdown(path, text) {
+  const prose = withoutCode(text)
+  const tag = /<\/?[a-zA-Z][a-zA-Z0-9-]*(?:\s[^<>]*)?>/.exec(prose)?.[0]
+  if (tag) problem(path, `contains the raw HTML tag ${tag}; the page markup behind it does not convert to Markdown`)
+  const entity = /&(?:amp|lt|gt|quot|apos|nbsp|#\d+);/.exec(prose)?.[0]
+  if (entity) problem(path, `contains the HTML entity ${entity}`)
+  // Words run together when two inline elements sit side by side with no space between them.
+  const glued = /\S{0,12}(?:[a-z0-9]\*\*[A-Z]|\)[A-Za-z]{2}|[a-z]\[[A-Z])\S{0,12}/.exec(prose)?.[0]
+  if (glued) problem(path, `has words run together: "${glued}"`)
+  const spaced = /\*\*[^*\n]{1,80} \*\*|\*\* [^*\n]{1,80}\*\*/.exec(prose)?.[0]
+  if (spaced) problem(path, `has bold text with a stray space, which Markdown shows as asterisks: "${spaced}"`)
+}
+
+for (const { route, html } of pages) {
+  const path = route === '/' ? '/index.md' : `${route}.md`
+  if (!fileSet.has(path)) continue
+  const markdown = read(path)
+  checkMarkdown(path, markdown)
+
+  const copy = plain(markdown)
+  const main = (/<main[^>]*>([\s\S]*)<\/main>/.exec(html)?.[1] ?? html).replace(/<(script|style|svg|nav)\b[\s\S]*?<\/\1>/g, ' ')
+  const missing = []
+  for (const [, , inner] of main.matchAll(/<(p|li|h[1-6]|td|th|figcaption|strong)\b[^>]*>([\s\S]*?)<\/\1>/g)) {
+    const text = plain(inner.replace(/<[^>]+>/g, ' '))
+    if (text.length >= 25 && !copy.includes(text.slice(0, 60))) missing.push(decode(inner.replace(/<[^>]+>/g, ' ')).replace(/\s+/g, ' ').trim().slice(0, 70))
+  }
+  if (missing.length) problem(path, `is missing ${missing.length} piece${missing.length === 1 ? '' : 's'} of text that the page shows, for example "${missing[0]}"`)
+}
+
+if (fileSet.has('/llms-full.txt')) checkMarkdown('/llms-full.txt', read('/llms-full.txt'))
+
+// The Markdown sitemap must list this build's pages at this build's address.
+if (fileSet.has('/sitemap.md') && origin) {
+  const listed = new Set([...read('/sitemap.md').matchAll(/\]\((\S+?)[\s)]/g)].map(match => match[1]))
+  const unlisted = [...routes].map(route => `${origin}${route === '/' ? '/index' : route}.md`).filter(address => !listed.has(address))
+  if (unlisted.length) problem('sitemap.md', `does not list ${unlisted.length} of ${routes.size} pages, for example ${unlisted[0]}; it may come from an earlier build`)
 }
 
 // Image files
