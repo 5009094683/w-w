@@ -52,7 +52,7 @@ const attribute = (tag, name) => {
   return match ? decode(match[1]) : undefined
 }
 
-const pages = files
+const htmlFiles = files
   .filter(file => file.endsWith('.html'))
   .map((file) => {
     const path = `/${relative(out, file)}`
@@ -60,6 +60,14 @@ const pages = files
     return { route, html: readFileSync(file, 'utf8') }
   })
   .sort((a, b) => a.route.localeCompare(b.route))
+
+// A redirect must be answered by the Worker. If the build wrote a file for it,
+// Cloudflare serves that file with status 200 and the redirect never happens.
+const isRedirectFile = html => /<meta http-equiv="refresh"/i.test(html)
+for (const { route } of htmlFiles.filter(page => isRedirectFile(page.html))) {
+  problem(route, 'was built as a redirect file, which Cloudflare would serve in place of the real redirect; set `prerender: false` on its route rule')
+}
+const pages = htmlFiles.filter(page => !isRedirectFile(page.html))
 
 const routes = new Set(pages.map(page => page.route))
 

@@ -26,6 +26,11 @@ const AI_CRAWLERS = [
 
 const company = parseYaml(readFileSync(new URL('./content/site.yaml', import.meta.url), 'utf8')) as { name: string, description: string }
 
+// Nuxt adds every redirect to the router, where the prerender crawler finds it
+// and writes a meta-refresh HTML file. Cloudflare would serve that file with
+// status 200 in place of the redirect, so redirects are never prerendered.
+const redirect = (to: string, statusCode: 301 | 302) => ({ redirect: { to, statusCode }, prerender: false as const })
+
 export default defineNuxtConfig({
   compatibilityDate: '2026-11-26',
 
@@ -116,12 +121,12 @@ export default defineNuxtConfig({
     // Payment pages are rendered on request, need scripts and stay out of search.
     '/payment': { noScripts: false, prerender: false, robots: false },
     '/payment/**': { noScripts: false, prerender: false, robots: false },
-    '/pay': { redirect: { to: '/payment', statusCode: 302 } },
+    '/pay': redirect('/payment', 302),
 
     // Pages that moved in v2 keep their old addresses working.
-    '/services/flavorai': { redirect: { to: '/products/flavorai', statusCode: 301 } },
-    '/services/flavorai-api': { redirect: { to: '/products/flavorai-api', statusCode: 301 } },
-    '/services/web3.0': { redirect: { to: '/services/web3', statusCode: 301 } },
+    '/services/flavorai': redirect('/products/flavorai', 301),
+    '/services/flavorai-api': redirect('/products/flavorai-api', 301),
+    '/services/web3.0': redirect('/services/web3', 301),
   },
 
   skewProtection: false,
