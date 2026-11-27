@@ -104,6 +104,8 @@ export default defineNuxtConfig({
     '/**': {
       noScripts: true,
       headers: {
+        // The value the site sends today. Browsers that have seen it refuse plain HTTP for two years.
+        'Strict-Transport-Security': 'max-age=63072000',
         'X-Content-Type-Options': 'nosniff',
         'Referrer-Policy': 'strict-origin-when-cross-origin',
         'X-Frame-Options': 'SAMEORIGIN',

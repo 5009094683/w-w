@@ -143,8 +143,24 @@ try {
   check('/contact-us is served with its scripts', contact.status === 200 && /<script type="module"/.test(contact.body), `status ${contact.status}`)
 
   const home = await get('/')
-  for (const [name, expected] of [['x-content-type-options', 'nosniff'], ['referrer-policy', 'strict-origin-when-cross-origin'], ['x-frame-options', 'SAMEORIGIN']]) {
+  for (const [name, expected] of [['strict-transport-security', 'max-age=63072000'], ['x-content-type-options', 'nosniff'], ['referrer-policy', 'strict-origin-when-cross-origin'], ['x-frame-options', 'SAMEORIGIN']]) {
     check(`/ sends ${name}`, home.headers.get(name) === expected, String(home.headers.get(name)))
+  }
+  const paymentHeaders = (await get('/payment')).headers
+  check('/payment, which the Worker renders, sends the same security headers', paymentHeaders.get('strict-transport-security') === 'max-age=63072000' && paymentHeaders.get('x-content-type-options') === 'nosniff' && paymentHeaders.get('x-frame-options') === 'SAMEORIGIN', `${paymentHeaders.get('strict-transport-security')}, ${paymentHeaders.get('x-content-type-options')}, ${paymentHeaders.get('x-frame-options')}`)
+  const notFoundHeaders = (await get('/no-such-page')).headers
+  check('no response says what software the site runs on', ![home.headers, paymentHeaders, notFoundHeaders].some(headers => headers.has('x-powered-by')), `x-powered-by: ${paymentHeaders.get('x-powered-by') ?? notFoundHeaders.get('x-powered-by')}`)
+
+  // One address per page: the www name must lead to the bare domain, not serve a second copy.
+  const host = new URL(base).hostname
+  if (!serve && host.split('.').length === 2) {
+    try {
+      const www = await fetch(`https://www.${host}/about-us`, { redirect: 'manual' })
+      await www.arrayBuffer()
+      check(`www.${host} redirects to ${host}`, [301, 308].includes(www.status) && www.headers.get('location') === `https://${host}/about-us`, `status ${www.status} to ${www.headers.get('location')}`)
+    } catch {
+      console.log(`note  www.${host} does not answer, so there is nothing to redirect.`)
+    }
   }
 
   // Cloudflare can rewrite pages on their way out. These features are set on
