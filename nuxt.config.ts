@@ -2,8 +2,9 @@ import tailwindcss from '@tailwindcss/vite'
 
 // A production build needs no environment variables. A staging build sets
 // NUXT_SITE_URL to its own address and NUXT_SITE_ENV=staging, which also keeps
-// it out of search engines.
-const siteUrl = process.env.NUXT_SITE_URL || 'https://ybxlabs.com'
+// it out of search engines. NUXT_PUBLIC_APP_URL is the name the previous site
+// used for the same setting and is still accepted.
+const siteUrl = (process.env.NUXT_SITE_URL || process.env.NUXT_PUBLIC_APP_URL || 'https://ybxlabs.com').replace(/\/+$/, '')
 const isStaging = process.env.NUXT_SITE_ENV === 'staging'
 
 export default defineNuxtConfig({
@@ -52,9 +53,26 @@ export default defineNuxtConfig({
     },
   },
 
+  runtimeConfig: {
+    public: {
+      // Public by design. Read at build time because the contact page is
+      // prebuilt; the older variable names are still accepted.
+      turnstileSiteKey: process.env.NUXT_PUBLIC_TURNSTILE_SITE_KEY
+        || process.env.NUXT_TURNSTILE_SITE_KEY
+        || process.env.TURNSTILE_SITE_KEY
+        || '',
+    },
+  },
+
   routeRules: {
     // Pages ship as HTML and CSS only. Routes that need JavaScript opt back in.
     '/**': { noScripts: true },
+    '/contact-us': { noScripts: false, prerender: true },
+
+    // Pages that moved in v2 keep their old addresses working.
+    '/services/flavorai': { redirect: { to: '/products/flavorai', statusCode: 301 } },
+    '/services/flavorai-api': { redirect: { to: '/products/flavorai-api', statusCode: 301 } },
+    '/services/web3.0': { redirect: { to: '/services/web3', statusCode: 301 } },
   },
 
   skewProtection: false,
@@ -74,8 +92,13 @@ export default defineNuxtConfig({
   },
 
   image: {
+    // Every size and format is generated at build time and served as a file.
     provider: 'ipxStatic',
     format: ['avif', 'webp'],
+  },
+
+  $development: {
+    image: { provider: 'ipx' },
   },
 
   fonts: {
