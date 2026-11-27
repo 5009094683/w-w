@@ -1,0 +1,36 @@
+# Variables for running the built Worker locally with `npm run preview`.
+# Copy this file to .dev.vars and fill in what you want to try. .dev.vars is
+# ignored by git. On Cloudflare the same names are set as secrets and
+# variables on the Worker; they are never stored in the repository.
+#
+# Every name can also be given with a NUXT_ prefix.
+
+# Cloudflare Turnstile. These two are Cloudflare's public test keys: the check
+# always passes. Use real keys in production.
+# The site key is read at build time: set TURNSTILE_SITE_KEY when you build.
+TURNSTILE_SECRET_KEY=1x0000000000000000000000000000000AA
+
+# Contact form (Resend)
+RESEND_API_KEY=
+CONTACT_EMAIL_TO=hello@ybxlabs.com
+CONTACT_EMAIL_FROM=website@ybxlabs.com
+
+# Razorpay. RAZORPAY_IS_SANDBOX=true uses the test pair, anything else the live pair.
+RAZORPAY_IS_SANDBOX=true
+RAZORPAY_TEST_KEY_ID=
+RAZORPAY_TEST_KEY_SECRET=
+RAZORPAY_KEY_ID=
+RAZORPAY_KEY_SECRET=
+
+# PhonePe
+PHONEPE_CLIENT_ID=
+PHONEPE_API_KEY=
+
+# Zoho Payments. All six are required, including the signing key.
+ZOHO_ACCOUNT_ID=
+ZOHO_API_KEY=
+ZOHO_SIGN_KEY=
+ZOHO_CLIENT_ID=
+ZOHO_CLIENT_SECRET=
+ZOHO_REFRESH_TOKEN=
+ZOHO_IS_SANDBOX=true
