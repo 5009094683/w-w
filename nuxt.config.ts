@@ -38,6 +38,9 @@ export default defineNuxtConfig({
 
   devtools: { enabled: false },
 
+  // No usage data is sent to Nuxt, and nobody is asked about it on first run.
+  telemetry: false,
+
   css: ['~/assets/css/main.css'],
 
   vite: {
