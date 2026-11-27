@@ -279,6 +279,27 @@ for (const file of ['/favicon.ico', '/icon.svg', '/apple-touch-icon.png', '/logo
   if (!fileSet.has(file)) problem(file, 'is missing')
 }
 
+// Redirects that Cloudflare answers itself
+const redirectRules = fileSet.has('/_redirects')
+  ? read('/_redirects').split('\n').filter(line => line.trim() && !line.startsWith('#')).map(line => line.trim().split(/\s+/))
+  : []
+if (fileSet.has('/_headers') && !redirectRules.length) problem('_redirects', 'was not built')
+if (redirectRules.length) {
+  const sources = new Map(redirectRules.map(([from, to, status]) => [from, { to, status }]))
+  for (const [from, to, status] of redirectRules) {
+    if (!from?.startsWith('/') || !to?.startsWith('/') || !/^30[1278]$/.test(status ?? '')) problem('_redirects', `cannot read the rule "${[from, to, status].join(' ')}"`)
+    // A rule whose source is a real page would take that page off the site.
+    if (routes.has(from)) problem('_redirects', `${from} is a page, but a rule redirects it to ${to}`)
+    if (!resolvesToSomething(to)) problem('_redirects', `${from} redirects to ${to}, which does not exist`)
+  }
+  for (const route of routes) {
+    if (route === '/') continue
+    const rule = sources.get(`${route}/`)
+    if (rule?.to !== route || rule.status !== '301') problem('_redirects', `${route}/ is not sent to ${route} for good (301)`)
+  }
+  if (redirectRules.length > 2000) problem('_redirects', `has ${redirectRules.length} rules; Cloudflare allows 2,000`)
+}
+
 // Cloudflare limits for static assets
 const headerRules = fileSet.has('/_headers') ? read('/_headers').split('\n').filter(line => /^\/|^https?:/.test(line)).length : 0
 if (headerRules > 100) problem('_headers', `has ${headerRules} rules; Cloudflare allows 100`)
@@ -287,7 +308,7 @@ for (const file of files) {
   if (statSync(file).size > 25 * 1024 * 1024) problem(relative(out, file), 'is larger than 25 MiB, the Cloudflare limit for one file')
 }
 
-console.log(`Checked ${pages.length} pages, ${files.length} files, ${headerRules} header rules (${staging ? 'staging' : 'production'} build for ${origin}).`)
+console.log(`Checked ${pages.length} pages, ${files.length} files, ${headerRules} header rules, ${redirectRules.length} redirect rules (${staging ? 'staging' : 'production'} build for ${origin}).`)
 for (const note of notes) console.log(`  note: ${note}`)
 
 if (problems.length) {

@@ -176,8 +176,17 @@ try {
   }
 
   // Addresses: no trailing slash, real 404s, redirects for moved pages
-  const slash = await get('/about-us/')
-  check('/about-us/ redirects to /about-us', [301, 307, 308].includes(slash.status) && slash.headers.get('location')?.replace(base, '') === '/about-us', `status ${slash.status} to ${slash.headers.get('location')}`)
+  // One address per page: other spellings are sent to it for good (301), so links and search engines settle on it.
+  for (const [from, to] of [
+    ['/about-us/', '/about-us'],
+    ['/careers/ai-ml-engineer/', '/careers/ai-ml-engineer'],
+    ['/About-Us', '/about-us'],
+    ['/Services/Development?utm_source=newsletter', '/services/development?utm_source=newsletter'],
+  ]) {
+    const response = await get(from)
+    check(`${from} redirects for good to ${to}`, response.status === 301 && response.headers.get('location')?.replace(base, '') === to, `status ${response.status} to ${response.headers.get('location')}`)
+  }
+  check('/about-us itself is served, not redirected', (await get('/about-us')).status === 200)
 
   const missing = await get('/this-page-does-not-exist')
   check('an unknown address returns 404', missing.status === 404, `status ${missing.status}`)

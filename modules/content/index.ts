@@ -1,3 +1,4 @@
+import { writeFile } from 'node:fs/promises'
 import { join, resolve } from 'node:path'
 import { addTemplate, addTypeTemplate, createResolver, defineNuxtModule, extendRouteRules, updateTemplates, useLogger } from '@nuxt/kit'
 import { IMAGE_BASE, writeImages } from './images'
@@ -61,6 +62,23 @@ export default defineNuxtModule({
       config.publicAssets = [...(config.publicAssets ?? []), { dir: imageDir, baseURL: IMAGE_BASE, maxAge: 60 * 60 * 24 * 365 }]
       config.prerender ??= {}
       config.prerender.routes = [...new Set([...(config.prerender.routes ?? []), ...data.routes.map(route => route.path)])]
+    })
+
+    // Cloudflare answers /about-us/ with a temporary redirect to /about-us.
+    // A _redirects file makes that permanent, and lets Cloudflare answer the
+    // site's other redirects itself, without starting the Worker.
+    nuxt.hook('nitro:init', (nitro) => {
+      nitro.hooks.hook('compiled', async () => {
+        if (!nitro.options.preset.startsWith('cloudflare')) {
+          return
+        }
+        const lines = [
+          ...Object.entries(nitro.options.routeRules).flatMap(([from, rule]) =>
+            rule.redirect && !from.includes('*') ? [`${from} ${rule.redirect.to} ${rule.redirect.statusCode}`] : []),
+          ...data.routes.filter(route => route.path !== '/').map(route => `${route.path}/ ${route.path} 301`),
+        ]
+        await writeFile(join(nitro.options.output.publicDir, '_redirects'), `${lines.join('\n')}\n`)
+      })
     })
 
     const types = resolver.resolve('./types')

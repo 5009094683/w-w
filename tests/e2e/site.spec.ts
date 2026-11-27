@@ -114,6 +114,26 @@ test.describe('addresses', () => {
       await expect(page.locator('h1')).toBeVisible()
     })
   }
+
+  for (const [from, to] of [
+    ['/About-Us', '/about-us'],
+    ['/about-us/', '/about-us'],
+    ['/CAREERS/AI-ML-Engineer/', '/careers/ai-ml-engineer'],
+    ['/Services/Development?utm_source=newsletter', '/services/development?utm_source=newsletter'],
+  ]) {
+    test(`${from} is sent for good to ${to}`, async ({ request }) => {
+      const hop = await request.get(from, { maxRedirects: 0 })
+
+      expect(hop.status()).toBe(301)
+      expect(hop.headers().location).toBe(to)
+    })
+  }
+
+  test('other spellings are only redirected when the page exists', async ({ request }) => {
+    expect((await request.get('/No-Such-Page/', { maxRedirects: 0 })).status()).toBe(404)
+    // The currency code in a payment link is written in capitals and must stay as it is.
+    expect((await request.get('/payment/100INR', { maxRedirects: 0 })).status()).toBe(200)
+  })
 })
 
 test.describe('appearance', () => {
