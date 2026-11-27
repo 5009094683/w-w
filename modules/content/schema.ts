@@ -47,6 +47,8 @@ export const siteSchema = z.strictObject({
   tagline: text(),
   description: text(50),
   registration: z.strictObject({ scheme: text(), number: text() }),
+  workingModel: text(),
+  governingLaw: text(),
   address: z.strictObject({
     careOf: text(),
     street: text(),

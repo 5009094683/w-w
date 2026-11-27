@@ -216,6 +216,7 @@ export async function loadContent(rootDir: string): Promise<T.ContentData> {
 
   const data: T.ContentData = {
     site: site.data,
+    footer: { services: [], products: [], company: [], legal: [] },
 
     home: {
       ...meta(home, '/'),
@@ -415,6 +416,20 @@ export async function loadContent(rootDir: string): Promise<T.ContentData> {
     ...data.jobs.map(item => route(item, 'careers', item.summary.text)),
     ...data.legal.map(item => route(item, 'legal', item.description)),
   ]
+
+  data.footer = {
+    services: data.services.map(item => ({ label: item.navTitle, href: item.path })),
+    products: data.products.map(item => ({ label: item.navTitle, href: item.path })),
+    company: [
+      { label: 'About', href: data.about.path },
+      { label: 'Careers', href: data.careers.path },
+      { label: 'Pricing', href: data.pricing.path },
+      { label: 'Questions', href: data.faq.path },
+      { label: 'Glossary', href: data.glossary.path },
+      { label: 'Contact', href: data.contact.path },
+    ],
+    legal: data.legal.map(item => ({ label: item.title, href: item.path })),
+  }
 
   const paths = data.routes.map(item => item.path)
   for (const path of paths.filter((item, index) => paths.indexOf(item) !== index)) {

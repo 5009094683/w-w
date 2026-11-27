@@ -189,8 +189,17 @@ export interface RouteInfo extends PageMeta {
   summary: string
 }
 
+/** Link lists for the footer, kept separate so pages with scripts load only this. */
+export interface FooterLinks {
+  services: Link[]
+  products: Link[]
+  company: Link[]
+  legal: Link[]
+}
+
 export interface ContentData {
   site: Site
+  footer: FooterLinks
   home: Home
   servicesHub: Hub
   productsHub: Hub

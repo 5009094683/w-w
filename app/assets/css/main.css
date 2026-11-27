@@ -1,8 +1,404 @@
 @import "tailwindcss";
 
-@theme {
-  --font-sans: "Instrument Sans", ui-sans-serif, system-ui, sans-serif;
-  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+/*
+ * Design tokens. The look is a lab notebook: paper and ink, one accent, thin
+ * rules and monospaced labels. Dark mode follows the visitor's device setting.
+ */
+:root {
+  color-scheme: light dark;
+
+  --paper: #f6f3ec;
+  --paper-raised: #efebe1;
+  --ink: #16161a;
+  --ink-soft: #45454d;
+  --ink-faint: #64646d;
+  --rule: rgb(22 22 26 / 0.16);
+  --rule-strong: rgb(22 22 26 / 0.85);
+  --accent: #d2401c;
+  --accent-ink: #ad300f;
+  --accent-wash: rgb(210 64 28 / 0.08);
+  --on-ink: #f6f3ec;
+
+  --page: 74rem;
+  --gutter: clamp(1.25rem, 4vw, 2.5rem);
 }
 
-body { font-family: var(--font-sans); }
+@media (prefers-color-scheme: dark) {
+  :root {
+    --paper: #121214;
+    --paper-raised: #1a1a1d;
+    --ink: #ece9e2;
+    --ink-soft: #bcb9b1;
+    --ink-faint: #94918a;
+    --rule: rgb(236 233 226 / 0.17);
+    --rule-strong: rgb(236 233 226 / 0.85);
+    --accent: #ff6a45;
+    --accent-ink: #ff8767;
+    --accent-wash: rgb(255 106 69 / 0.1);
+    --on-ink: #121214;
+  }
+}
+
+@theme inline {
+  --color-paper: var(--paper);
+  --color-raised: var(--paper-raised);
+  --color-ink: var(--ink);
+  --color-soft: var(--ink-soft);
+  --color-faint: var(--ink-faint);
+  --color-rule: var(--rule);
+  --color-rule-strong: var(--rule-strong);
+  --color-accent: var(--accent);
+  --color-accent-ink: var(--accent-ink);
+  --color-wash: var(--accent-wash);
+  --color-on-ink: var(--on-ink);
+
+  --font-sans: "Instrument Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+
+  --breakpoint-xs: 26rem;
+}
+
+@layer base {
+  html {
+    background-color: var(--paper);
+    color: var(--ink);
+    font-family: var(--font-sans);
+    font-size: 100%;
+    line-height: 1.6;
+    -webkit-text-size-adjust: 100%;
+    text-rendering: optimizeLegibility;
+    scroll-padding-top: 2rem;
+  }
+
+  body {
+    min-height: 100vh;
+    font-size: 1.0625rem;
+    font-feature-settings: "ss01", "kern";
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-weight: 600;
+    line-height: 1.12;
+    letter-spacing: -0.02em;
+    text-wrap: balance;
+  }
+
+  p,
+  li,
+  dd {
+    text-wrap: pretty;
+  }
+
+  a {
+    color: inherit;
+    text-underline-offset: 0.2em;
+    text-decoration-thickness: 1px;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 3px;
+    border-radius: 2px;
+  }
+
+  ::selection {
+    background-color: var(--accent);
+    color: #fff;
+  }
+
+  img {
+    max-width: 100%;
+    height: auto;
+  }
+}
+
+@layer components {
+  /* Page frame */
+  .wrap {
+    width: 100%;
+    max-width: calc(var(--page) + var(--gutter) * 2);
+    margin-inline: auto;
+    padding-inline: var(--gutter);
+  }
+
+  /* Monospaced label used for section numbers, codes and metadata. */
+  .label {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    font-weight: 500;
+    line-height: 1.4;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+  }
+
+  .label-accent {
+    color: var(--accent-ink);
+  }
+
+  .lead {
+    font-size: clamp(1.125rem, 0.6vw + 1rem, 1.3125rem);
+    line-height: 1.5;
+    color: var(--ink-soft);
+  }
+
+  .link {
+    text-decoration: underline;
+    text-decoration-color: var(--accent);
+    transition: color 0.15s ease;
+  }
+
+  .link:hover {
+    color: var(--accent-ink);
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.6rem;
+    min-height: 2.875rem;
+    padding: 0.625rem 1.125rem;
+    border: 1px solid var(--ink);
+    border-radius: 2px;
+    font-size: 1rem;
+    font-weight: 500;
+    line-height: 1.2;
+    text-decoration: none;
+    cursor: pointer;
+    transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+  }
+
+  .btn-primary {
+    background-color: var(--ink);
+    color: var(--on-ink);
+  }
+
+  .btn-primary:hover {
+    background-color: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+  }
+
+  .btn-secondary {
+    background-color: transparent;
+    color: var(--ink);
+  }
+
+  .btn-secondary:hover {
+    background-color: var(--ink);
+    color: var(--on-ink);
+  }
+
+  .btn:disabled,
+  .btn[aria-disabled="true"] {
+    opacity: 0.55;
+    cursor: not-allowed;
+  }
+
+  .btn .arrow {
+    transition: transform 0.15s ease;
+  }
+
+  .btn:hover .arrow {
+    transform: translateX(3px);
+  }
+
+  /* Rendered Markdown and other rich text. */
+  .prose {
+    max-width: 44rem;
+    color: var(--ink-soft);
+  }
+
+  .prose > * + * {
+    margin-top: 1.1em;
+  }
+
+  .prose h2 {
+    margin-top: 2.6em;
+    padding-top: 1.2em;
+    border-top: 1px solid var(--rule);
+    font-size: clamp(1.45rem, 1vw + 1.2rem, 1.85rem);
+    color: var(--ink);
+  }
+
+  .prose > h2:first-child {
+    margin-top: 0;
+    padding-top: 0;
+    border-top: 0;
+  }
+
+  .prose h3 {
+    margin-top: 2em;
+    font-size: 1.2rem;
+    letter-spacing: -0.01em;
+    color: var(--ink);
+  }
+
+  .prose strong {
+    font-weight: 600;
+    color: var(--ink);
+  }
+
+  .prose a {
+    color: var(--ink);
+    text-decoration: underline;
+    text-decoration-color: var(--accent);
+    transition: color 0.15s ease;
+  }
+
+  .prose a:hover {
+    color: var(--accent-ink);
+  }
+
+  .prose ul,
+  .prose ol {
+    padding-left: 1.3em;
+  }
+
+  .prose ul {
+    list-style: none;
+  }
+
+  .prose ul > li {
+    position: relative;
+  }
+
+  .prose ul > li::before {
+    content: "";
+    position: absolute;
+    left: -1.2em;
+    top: 0.72em;
+    width: 0.55em;
+    height: 1px;
+    background-color: var(--accent);
+  }
+
+  .prose ol {
+    list-style: decimal;
+  }
+
+  .prose ol > li::marker {
+    font-family: var(--font-mono);
+    font-size: 0.85em;
+    color: var(--accent-ink);
+  }
+
+  .prose li + li {
+    margin-top: 0.45em;
+  }
+
+  .prose blockquote {
+    padding-left: 1.1em;
+    border-left: 2px solid var(--accent);
+    color: var(--ink);
+  }
+
+  .prose code {
+    padding: 0.1em 0.35em;
+    border: 1px solid var(--rule);
+    border-radius: 2px;
+    background-color: var(--paper-raised);
+    font-family: var(--font-mono);
+    font-size: 0.86em;
+  }
+
+  .prose pre {
+    overflow-x: auto;
+    padding: 1.1rem 1.25rem;
+    border: 1px solid var(--rule);
+    border-radius: 2px;
+    background-color: var(--paper-raised);
+    font-family: var(--font-mono);
+    font-size: 0.84rem;
+    line-height: 1.6;
+    color: var(--ink);
+  }
+
+  .prose pre code {
+    padding: 0;
+    border: 0;
+    background: none;
+    font-size: inherit;
+  }
+
+  .prose table {
+    display: block;
+    max-width: 100%;
+    overflow-x: auto;
+    border-collapse: collapse;
+    font-size: 0.95rem;
+    line-height: 1.45;
+  }
+
+  .prose th,
+  .prose td {
+    min-width: 9rem;
+    padding: 0.7rem 1rem 0.7rem 0;
+    border-bottom: 1px solid var(--rule);
+    text-align: left;
+    vertical-align: top;
+  }
+
+  .prose th {
+    border-bottom-color: var(--rule-strong);
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    font-weight: 500;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+  }
+
+  .prose td:first-child {
+    color: var(--ink);
+    font-weight: 500;
+  }
+
+  /* Inline rich text (a rendered field, not a full document). */
+  .rich a {
+    text-decoration: underline;
+    text-decoration-color: var(--accent);
+  }
+
+  .rich a:hover {
+    color: var(--accent-ink);
+  }
+
+  .rich strong {
+    font-weight: 600;
+    color: var(--ink);
+  }
+
+  .rich p + p {
+    margin-top: 0.7em;
+  }
+}
+
+/* Page-to-page transitions are a short cross-fade; none for reduced motion. */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 0.16s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
+  }
+}
